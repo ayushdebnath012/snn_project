@@ -1,0 +1,20 @@
+{
+  "ModelNet10": {
+    "spm_best": 0.9251101321585903,
+    "asp_best": 0.9328193832599119,
+    "delta_pp": 0.770925110132159,
+    "asp_avg_chunks": 3.8898678414096914,
+    "firing_rate": 0.2627427821096621,
+    "teacher_best": 0.9118942731277533,
+    "kd_enabled": true
+  },
+  "ModelNet40": {
+    "spm_best": 0.8950567260940032,
+    "asp_best": 0.8910048622366289,
+    "delta_pp": -0.4051863857374327,
+    "asp_avg_chunks": 3.8444084278768234,
+    "firing_rate": 0.24454410805513985,
+    "teacher_best": 0.8914100486223663,
+    "kd_enabled": true
+  }
+}
