@@ -68,6 +68,68 @@ data/imagenet/
 
 ---
 
+## Environment And Self-Check
+
+You do **not** have to create a new conda environment if your current
+environment already has the required packages. If you are already using an
+environment for Akarsh's code, try these checks first from the repo root:
+
+```bash
+cd ASP-SNN
+python --version
+python -c "import torch, torchvision, yaml, numpy; print(torch.__version__); print(torchvision.__version__); print('CUDA:', torch.cuda.is_available())"
+python smoke_test.py
+```
+
+If `python smoke_test.py` prints `ALL 8 TESTS PASSED`, the current environment
+is good for code sanity checks and CPU smoke runs.
+
+For real GPU training, also make sure CUDA PyTorch is visible:
+
+```bash
+python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.device_count())"
+```
+
+If that prints `False` or `0`, the code can still run CPU smoke tests, but
+full training should be run in a CUDA-enabled environment.
+
+If your current environment fails imports or does not have CUDA PyTorch, create
+the provided environment:
+
+```bash
+cd ASP-SNN
+bash setup.sh
+conda activate asp-snn
+python smoke_test.py
+```
+
+### Checks Already Run By Us
+
+From `ASP-SNN/`, on the current checkout, we verified:
+
+```bash
+python smoke_test.py
+```
+
+Result: `ALL 8 TESTS PASSED`
+
+We also verified the FoveaTer/ImageNet synthetic smoke-training path:
+
+```bash
+python train_imagenet_foveater.py --config configs/imagenet_foveater.yaml \
+  --set smoke=true epochs=1 batch_size=2 image_size=64 feature_grid=4 \
+        embed_dim=48 depth=1 max_fixations=2 max_tokens=8 debug_steps=1 \
+        num_workers=0 use_amp=false num_classes=10 verbose_every=1
+```
+
+Result: completed one synthetic training/eval pass successfully.
+
+Local limitation: this verification machine had CPU-only PyTorch
+(`torch.cuda.is_available() == False`), so GPU execution and real-dataset
+training must be checked on the target GPU machine after datasets are present.
+
+---
+
 ## Exact Run Commands By Dataset
 
 Run every command in this section from the repository root folder:
@@ -75,6 +137,12 @@ Run every command in this section from the repository root folder:
 ```bash
 git clone https://github.com/AryaPawa/ASP-SNN.git
 cd ASP-SNN
+```
+
+If your current environment passed the checks above, keep using it. Otherwise
+create and activate the provided environment:
+
+```bash
 bash setup.sh
 conda activate asp-snn
 ```
