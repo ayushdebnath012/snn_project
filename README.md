@@ -181,7 +181,7 @@ python train_shapenet.py --config configs/shapenet_seg.yaml \
 Full training:
 
 ```bash
-python train_shapenet.py --config configs/shapenet_seg.yaml
+python train_shapenet.py --config configs/shapenet_seg.yaml --set epochs=500
 ```
 
 Evaluate:
@@ -210,7 +210,7 @@ python train_scanobj.py --config configs/scanobj_cls.yaml \
 Full training:
 
 ```bash
-python train_scanobj.py --config configs/scanobj_cls.yaml
+python train_scanobj.py --config configs/scanobj_cls.yaml --set epochs=500
 ```
 
 Evaluate:
@@ -239,7 +239,7 @@ python train_s3dis.py --config configs/s3dis_seg.yaml \
 Full training:
 
 ```bash
-python train_s3dis.py --config configs/s3dis_seg.yaml
+python train_s3dis.py --config configs/s3dis_seg.yaml --set epochs=500
 ```
 
 Evaluate:
@@ -382,15 +382,15 @@ ASP-SNN/
 ├── smoke_test.py                   # 8-test verification suite (CPU, no data)
 │
 ├── configs/                        # Per-dataset YAML configurations
-│   ├── shapenet_seg.yaml           #   300 epochs, bs=32, pts_per_slice=128
-│   ├── scanobj_cls.yaml            #   300 epochs, bs=32, SO(3) aug, SWA, deep MLP head
+│   ├── shapenet_seg.yaml           #   500 epochs, bs=32, pts_per_slice=128
+│   ├── scanobj_cls.yaml            #   500 epochs, bs=32, SO(3) aug, SWA, deep MLP head
 │   ├── imagenet_foveater.yaml      #   FoveaTer ASP on ImageNet/ImageNet-100
-│   └── s3dis_seg.yaml              #   100 epochs, bs=16, RGB+height, class weights
+│   └── s3dis_seg.yaml              #   500 epochs, bs=16, RGB+height, class weights
 │
 ├── scripts/                        # SLURM job scripts for GPU cluster
-│   ├── run_shapenet.sh             #   12h wall, 1 GPU, 8 CPUs, 32G
+│   ├── run_shapenet.sh             #   18h wall, 1 GPU, 8 CPUs, 32G
 │   ├── run_scanobj.sh              #   8h wall, 1 GPU, 8 CPUs, 32G
-│   ├── run_s3dis.sh                #   24h wall, 1 GPU, 8 CPUs, 64G
+│   ├── run_s3dis.sh                #   72h wall, 1 GPU, 8 CPUs, 64G
 │   ├── run_imagenet_foveater.sh    #   FoveaTer ASP ImageNet helper
 │   ├── smoke_train.sh              #   Quick serial 2-epoch test for all 3 point-cloud datasets
 │   └── smoke_train_parallel.sh     #   Quick parallel smoke jobs across GPUs
@@ -578,9 +578,9 @@ Edit the `#SBATCH` headers in `scripts/run_*.sh` to match your cluster's
 partition and account names, then submit:
 
 ```bash
-sbatch scripts/run_shapenet.sh     # ~8h on H100
-sbatch scripts/run_scanobj.sh      # ~4h on H100
-sbatch scripts/run_s3dis.sh        # ~12h on H100
+sbatch scripts/run_shapenet.sh     # ~12-13h on H100 for 500 epochs
+sbatch scripts/run_scanobj.sh      # ~4-5h on H100 for 500 epochs
+sbatch scripts/run_s3dis.sh        # ~42-67h on H100 for 500 epochs
 ```
 
 All three run in parallel on separate GPUs.
@@ -588,9 +588,9 @@ All three run in parallel on separate GPUs.
 ### Option B: Interactive (3 terminals)
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python train_shapenet.py --config configs/shapenet_seg.yaml &
-CUDA_VISIBLE_DEVICES=1 python train_scanobj.py --config configs/scanobj_cls.yaml &
-CUDA_VISIBLE_DEVICES=2 python train_s3dis.py --config configs/s3dis_seg.yaml &
+CUDA_VISIBLE_DEVICES=0 python train_shapenet.py --config configs/shapenet_seg.yaml --set epochs=500 &
+CUDA_VISIBLE_DEVICES=1 python train_scanobj.py --config configs/scanobj_cls.yaml --set epochs=500 &
+CUDA_VISIBLE_DEVICES=2 python train_s3dis.py --config configs/s3dis_seg.yaml --set epochs=500 &
 ```
 
 ### Quick smoke training (verify full pipeline with real data, ~10 min)
@@ -615,7 +615,7 @@ Resumes model weights, optimizer state, LR scheduler, AMP scaler, and epoch coun
 ### Override config values from CLI
 
 ```bash
-python train_scanobj.py --config configs/scanobj_cls.yaml --set epochs=100 lr=1e-3 batch_size=16
+python train_scanobj.py --config configs/scanobj_cls.yaml --set epochs=500 lr=1e-3 batch_size=16
 ```
 
 ### Monitor training
@@ -655,9 +655,9 @@ Estimated training time on NVIDIA H100 80GB:
 
 | Dataset | Epochs | Batch size | Time per epoch | Total |
 |---|---|---|---|---|
-| ScanObjectNN | 300 | 32 | ~30s | ~3-4h |
-| ShapeNetPart | 300 | 32 | ~1.5min | ~7-8h |
-| S3DIS | 100 | 16 | ~5-8min | ~10-14h |
+| ScanObjectNN | 500 | 32 | ~30s | ~4-5h |
+| ShapeNetPart | 500 | 32 | ~1.5min | ~12-13h |
+| S3DIS | 500 | 16 | ~5-8min | ~42-67h |
 
 ---
 

@@ -32,7 +32,7 @@ T: 6
 point_feat_dim: 64
 
 # ── Training ───────────────────────────────────────────────────────────
-epochs: 100
+epochs: 500
 batch_size: 16
 lr: 1e-3
 weight_decay: 0.01

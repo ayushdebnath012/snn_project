@@ -2,7 +2,7 @@
 #SBATCH --job-name=asp-shapenet
 #SBATCH --output=logs/shapenet_%j.log
 #SBATCH --error=logs/shapenet_%j.err
-#SBATCH --time=12:00:00
+#SBATCH --time=18:00:00
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8

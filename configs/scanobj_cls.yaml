@@ -32,7 +32,7 @@ cls_head_dims: [256, 128]
 cls_head_dropout: [0.5, 0.3]
 
 # ── Training ───────────────────────────────────────────────────────────
-epochs: 300
+epochs: 500
 batch_size: 32
 lr: 4e-4
 weight_decay: 0.01
