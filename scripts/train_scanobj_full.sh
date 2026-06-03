@@ -1,21 +1,20 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/bash
+# scripts/train_scanobj_full.sh — Full ScanObjectNN training + 10-vote eval.
 
-cd "$(dirname "$0")/.."
+set -e
 mkdir -p logs checkpoints
 
-GPU="${GPU:-0}"
-EPOCHS="${EPOCHS:-500}"
-BATCH_SIZE="${BATCH_SIZE:-32}"
-NUM_WORKERS="${NUM_WORKERS:-4}"
-TEST_EVAL_INTERVAL="${TEST_EVAL_INTERVAL:-25}"
-LOG_FILE="${LOG_FILE:-logs/scanobj_full_gpu${GPU}.log}"
+GPU=${CUDA_VISIBLE_DEVICES:-0}
+echo "Training ScanObjectNN on GPU ${GPU}"
 
-echo "Running ScanObjectNN full training on GPU ${GPU}"
-echo "Log file: ${LOG_FILE}"
+CUDA_VISIBLE_DEVICES=${GPU} PYTHONUNBUFFERED=1 python -u train_scanobj.py \
+    --config configs/scanobj_cls.yaml \
+    --set num_workers=8 \
+    2>&1 | tee logs/scanobj_full_gpu${GPU}.log
 
-CUDA_VISIBLE_DEVICES="${GPU}" PYTHONUNBUFFERED=1 python -u train_scanobj.py \
-  --config configs/scanobj_cls.yaml \
-  --set epochs="${EPOCHS}" batch_size="${BATCH_SIZE}" \
-        num_workers="${NUM_WORKERS}" test_eval_interval="${TEST_EVAL_INTERVAL}" \
-  2>&1 | tee "${LOG_FILE}"
+echo ""
+echo "Training complete. Evaluating with 10-vote TTA ..."
+python eval_scanobj.py \
+    --ckpt checkpoints/scanobj_best.pt \
+    --config configs/scanobj_cls.yaml \
+    --n_votes 10

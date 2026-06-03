@@ -134,6 +134,9 @@ class ShapeNetPartDataset(Dataset):
         # Augment (training only) — shared transform on slices + pts
         if self.split == 'train' and self.cfg is not None:
             slices, pts_n = augment_seg(slices, pts_n, self.cfg)
+            # P0 FIX: Recompute geo from augmented slices so positional encoding
+            # and SSP see the same geometry as the encoder.
+            # Without this, train and test see different (geo, points) distributions.
             geo = np.stack([compute_geo(s) for s in slices])
 
         return (

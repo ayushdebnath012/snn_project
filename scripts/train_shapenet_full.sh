@@ -1,21 +1,21 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/bash
+# scripts/train_shapenet_full.sh — Full ShapeNetPart training run.
+# Sets num_workers=8 and batch=32 for H100. Pipes output to log file.
 
-cd "$(dirname "$0")/.."
+set -e
 mkdir -p logs checkpoints
 
-GPU="${GPU:-0}"
-EPOCHS="${EPOCHS:-500}"
-BATCH_SIZE="${BATCH_SIZE:-32}"
-NUM_WORKERS="${NUM_WORKERS:-4}"
-EVAL_INTERVAL="${EVAL_INTERVAL:-5}"
-LOG_FILE="${LOG_FILE:-logs/shapenet_full_gpu${GPU}.log}"
+GPU=${CUDA_VISIBLE_DEVICES:-0}
+echo "Training ShapeNetPart on GPU ${GPU}"
 
-echo "Running ShapeNetPart full training on GPU ${GPU}"
-echo "Log file: ${LOG_FILE}"
+CUDA_VISIBLE_DEVICES=${GPU} PYTHONUNBUFFERED=1 python -u train_shapenet.py \
+    --config configs/shapenet_seg.yaml \
+    --set num_workers=8 \
+    2>&1 | tee logs/shapenet_full_gpu${GPU}.log
 
-CUDA_VISIBLE_DEVICES="${GPU}" PYTHONUNBUFFERED=1 python -u train_shapenet.py \
-  --config configs/shapenet_seg.yaml \
-  --set epochs="${EPOCHS}" batch_size="${BATCH_SIZE}" \
-        num_workers="${NUM_WORKERS}" eval_interval="${EVAL_INTERVAL}" \
-  2>&1 | tee "${LOG_FILE}"
+echo ""
+echo "Training complete. Evaluating with per-category breakdown ..."
+python eval_shapenet.py \
+    --ckpt checkpoints/shapenet_best.pt \
+    --config configs/shapenet_seg.yaml \
+    --per_cat
