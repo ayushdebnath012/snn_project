@@ -19,6 +19,8 @@ k_edge: 20
 transformer_heads: 4
 transformer_ffn_dim: 1024
 hidden_dim: 512
+slice_pool: meanmax
+slice_token_dropout: 0.05
 num_lif_layers: 3
 lif_leak: 0.9
 lif_threshold: 1.0
@@ -66,9 +68,13 @@ aug_jitter_sigma: 0.01   # Was 0.02
 aug_jitter_clip: 0.05
 aug_point_dropout: 0.2   # Was 0.3
 aug_slice_dropout: 0.1   # Was 0.15
+aug_anisotropic_scale: false
+aug_tilt: 0.0
+aug_elastic: false
 
 # ── Test-time augmentation ─────────────────────────────────────────────
 n_votes: 10
+logit_ensemble: 3
 
 # ── Logging ────────────────────────────────────────────────────────────
 eval_interval: 1

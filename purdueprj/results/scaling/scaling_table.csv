@@ -1,0 +1,11 @@
+dataset,model,slicing,type,params,val_acc,epochs
+modelnet10,ours_base,radial,SNN,695562,10.0,1
+modelnet10,ours_base,fps,SNN,695562,10.0,1
+modelnet10,ours_full,radial,SNN,1232906,10.0,1
+modelnet10,ours_full,fps,SNN,1232906,10.0,1
+modelnet10,ours_large,fps,SNN,4890634,10.0,1
+modelnet10,ours_xl,fps,SNN,5942282,10.0,1
+modelnet10,ours_transformer_small,fps,SNN,306570,10.0,1
+modelnet10,ours_pct_snn,fps,SNN,1202954,10.0,1
+modelnet10,spm,radial,SNN,4114186,10.0,1
+modelnet10,spm,fps,SNN,4114186,10.0,1

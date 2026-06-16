@@ -19,6 +19,7 @@ class ASPClassifier(nn.Module):
 
     def __init__(self, cfg):
         super().__init__()
+        self.cfg = cfg
         in_channels = int(getattr(cfg, "in_channels", 6))
         hidden_dim = int(getattr(cfg, "hidden_dim", getattr(cfg, "feat_dim", 512)))
         geo_dim = int(getattr(cfg, "geo_dim", 8))
@@ -28,7 +29,10 @@ class ASPClassifier(nn.Module):
         self.hidden_dim = hidden_dim
         self.num_classes = num_classes
         self.T = int(getattr(cfg, "T", 6))
+        self.slice_pool = str(getattr(cfg, "slice_pool", "meanmax")).lower()
         self.register_buffer("gumbel_tau", torch.tensor(1.0))
+        self.initial_belief = nn.Parameter(torch.empty(hidden_dim))
+        nn.init.normal_(self.initial_belief, std=0.02)
 
         self.feature_extractor = nn.Sequential(
             nn.Linear(in_channels, hidden_dim),
@@ -36,7 +40,24 @@ class ASPClassifier(nn.Module):
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(inplace=True),
         )
+        if self.slice_pool == "meanmax":
+            self.slice_pool_proj = nn.Sequential(
+                nn.Linear(hidden_dim * 2, hidden_dim),
+                nn.LayerNorm(hidden_dim),
+                nn.GELU(),
+            )
+        elif self.slice_pool in {"mean", "max"}:
+            self.slice_pool_proj = nn.Identity()
+        else:
+            raise ValueError(
+                f"Unsupported slice_pool={self.slice_pool!r}; "
+                "expected 'mean', 'max', or 'meanmax'"
+            )
         self.pos_proj = nn.Linear(geo_dim, hidden_dim)
+        self.slice_token_norm = nn.LayerNorm(hidden_dim)
+        self.slice_token_dropout = nn.Dropout(
+            float(getattr(cfg, "slice_token_dropout", 0.0))
+        )
         enc_layer = nn.TransformerEncoderLayer(
             d_model=hidden_dim,
             nhead=heads,
@@ -75,12 +96,23 @@ class ASPClassifier(nn.Module):
             return [1.0]
         return [0.5 + 0.5 * ((i + 1) / t_steps) for i in range(t_steps)]
 
+    def _pool_slice_points(self, x: torch.Tensor) -> torch.Tensor:
+        if self.slice_pool == "mean":
+            return x.mean(dim=2)
+        if self.slice_pool == "max":
+            return x.max(dim=2).values
+        mean = x.mean(dim=2)
+        maxv = x.max(dim=2).values
+        return self.slice_pool_proj(torch.cat([mean, maxv], dim=-1))
+
     def _encode_slices(self, slices: torch.Tensor, geo: torch.Tensor) -> torch.Tensor:
         bsz, n_slices, pts_per_slice, channels = slices.shape
         x = slices.reshape(bsz * n_slices * pts_per_slice, channels)
         x = self.feature_extractor(x)
-        x = x.reshape(bsz, n_slices, pts_per_slice, self.hidden_dim).mean(dim=2)
-        x = x + self.pos_proj(geo)
+        x = x.reshape(bsz, n_slices, pts_per_slice, self.hidden_dim)
+        x = self._pool_slice_points(x)
+        x = self.slice_token_norm(x + self.pos_proj(geo))
+        x = self.slice_token_dropout(x)
         return self.slice_transformer(x)
 
     def forward(self, slices: torch.Tensor, geo: torch.Tensor, training: bool = True):
@@ -89,7 +121,7 @@ class ASPClassifier(nn.Module):
         steps = min(int(getattr(self, "T", n_slices)), n_slices)
         device = slices.device
 
-        belief = torch.zeros(bsz, self.hidden_dim, device=device)
+        belief = self.initial_belief.unsqueeze(0).expand(bsz, -1)
         visited = torch.zeros(bsz, n_slices, dtype=torch.bool, device=device)
         logits_all = []
 

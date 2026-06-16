@@ -32,6 +32,7 @@ fi
 # Skip if already converted
 if [ -f "${OUT_DIR}/all_object_categories.txt" ] \
    && ls "${OUT_DIR}"/train*.h5 >/dev/null 2>&1 \
+   && ls "${OUT_DIR}"/val*.h5 >/dev/null 2>&1 \
    && ls "${OUT_DIR}"/test*.h5 >/dev/null 2>&1; then
     echo "[Skip] HDF5 already present at ${OUT_DIR}"
     exit 0
@@ -92,13 +93,14 @@ python datasets/convert_shapenet_raw.py \
 
 # Verify
 N_TRAIN=$(ls ${OUT_DIR}/train*.h5 2>/dev/null | wc -l)
+N_VAL=$(ls ${OUT_DIR}/val*.h5 2>/dev/null | wc -l)
 N_TEST=$(ls ${OUT_DIR}/test*.h5 2>/dev/null | wc -l)
-if [ "${N_TRAIN}" -eq 0 ] || [ "${N_TEST}" -eq 0 ]; then
-    echo "[ERROR] Conversion finished but no train/test H5 files were written."
+if [ "${N_TRAIN}" -eq 0 ] || [ "${N_VAL}" -eq 0 ] || [ "${N_TEST}" -eq 0 ]; then
+    echo "[ERROR] Conversion finished but a train/val/test split is missing."
     exit 1
 fi
 echo ""
 echo "========================================"
 echo "  Done!"
-echo "  ${N_TRAIN} train H5 + ${N_TEST} test H5 in ${OUT_DIR}"
+echo "  ${N_TRAIN} train + ${N_VAL} val + ${N_TEST} test H5 in ${OUT_DIR}"
 echo "========================================"

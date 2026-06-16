@@ -26,12 +26,16 @@ k_edge: 20
 transformer_heads: 4
 transformer_ffn_dim: 1024
 hidden_dim: 512
+slice_pool: meanmax
+slice_token_dropout: 0.05
+context_ensemble: 2
 num_lif_layers: 3
 lif_leak: 0.9
 lif_threshold: 1.0
 d_ssp: 128
 T: 6
 point_feat_dim: 64
+seg_head_dropout: 0.1
 
 # ── Training (H100-tuned: larger batch, fewer epochs) ──────────────────
 epochs: 100              # 100 is sufficient for S3DIS (most papers use 100-300)
@@ -57,7 +61,14 @@ aug_jitter_sigma: 0.005
 aug_jitter_clip: 0.02
 aug_color_drop: 0.2
 aug_color_jitter: 0.05
-aug_elastic: false
+aug_anisotropic_scale: false
+aug_tilt: 0.0
+aug_elastic: true
+aug_elastic_strength: 0.015
+aug_elastic_clip: 0.03
+aug_elastic_bandwidth: 0.35
+aug_elastic_anchors: 12
+aug_elastic_z_scale: 0.2
 
 # ── Logging ────────────────────────────────────────────────────────────
 eval_interval: 5

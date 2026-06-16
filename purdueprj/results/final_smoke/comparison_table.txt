@@ -1,0 +1,56 @@
+==========================================================================================
+  MAIN COMPARISON — ModelNet40
+==========================================================================================
+Model                        Type             Params     Acc%   MeanExit  Paper
+------------------------------------------------------------------------------------------
+ann_pointnet                 ANN             710,952     4.69       16.0  Ours (ANN)
+ann_dgcnn                    ANN             772,008     3.91       16.0  DGCNN 2019
+ours_full                    SNN           1,248,296     2.34       16.0  Ours
+e3dsnn                       SNN             110,198     2.34       16.0  E-3DSNN (2412.07360)
+ann_pct                      ANN             546,856     1.56       16.0  PCT 2021
+ann_pointnetpp               ANN             102,248     1.56       16.0  PointNet++ 2017
+ours_base                    SNN             710,952     0.78       16.0  Ours
+ours_learnable               SNN             714,792     0.78       16.0  Ours
+ours_bidir                   SNN           1,242,152     0.78       16.0  Ours
+ours_knn                     SNN             720,936     0.00       16.0  Ours
+spiking_ssm                  SNN                   0     0.00        N/A  SpikingSSMs (2408.14909)
+spt                          SNN                   0     0.00        N/A  SPT (2502.15811)
+
+--- Published Baselines (from papers, ModelNet40) ---
+Model                        Type          MN40 Acc%  Paper
+------------------------------------------------------------
+PointNet                     ANN                89.2  2017
+PointNet++                   ANN                90.7  2017
+PointMLP                     ANN                94.1  2022
+PointMamba                   ANN                92.4  2024
+SpikingPtNet                 SNN                88.2  2310.06232
+P2SResLNet-B                 SNN                88.7  2023
+SPT                          SNN                91.4  2502.15811
+SPM                          SNN                92.3  2504.14371
+
+==========================================================================================
+  SCALING ABLATION — FPS slicing
+==========================================================================================
+Model                        Dataset          Params     Acc%
+-----------------------------------------------------------------
+ours_base                    modelnet40      710,952     2.50
+ours_full                    modelnet40    1,248,296     2.50
+ours_large                   modelnet40    4,921,384     2.50
+ours_xl                      modelnet40    5,973,032     2.50
+ours_pct_snn                 modelnet40    1,210,664     2.50
+
+==========================================================================================
+  SLICING ABLATION (Radial vs FPS, SNN vs ANN)
+==========================================================================================
+Model                        Type   Slicing   MN40 Acc%
+------------------------------------------------------------
+ann_pointnet                 ANN    fps            2.50
+ann_pointnet                 ANN    radial         2.50
+ours_full                    SNN    fps            2.50
+ours_full                    SNN    radial         2.50
+ours_large                   SNN    fps            2.50
+ours_large                   SNN    radial         2.50
+
+==========================================================================================
+  ANN->SNN CONVERSION
+==========================================================================================

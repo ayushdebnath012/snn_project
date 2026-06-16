@@ -1,0 +1,31 @@
+group,dataset,model,slicing,type,params,val_acc,mean_exit,paper
+slicing,modelnet40,ours_full,radial,SNN,1248296,2.5,N/A,Ours
+slicing,modelnet40,ours_full,fps,SNN,1248296,2.5,N/A,Ours
+slicing,modelnet40,ours_large,radial,SNN,4921384,2.5,N/A,Ours
+slicing,modelnet40,ours_large,fps,SNN,4921384,2.5,N/A,Ours
+slicing,modelnet40,ann_pointnet,radial,ANN,710952,2.5,N/A,Ours (ANN)
+slicing,modelnet40,ann_pointnet,fps,ANN,710952,2.5,N/A,Ours (ANN)
+conversion,modelnet40,ann_dgcnn->(ann_acc),rate-coded,ANN,772008,2.5,N/A,ANN->SNN
+conversion,modelnet40,ann_dgcnn->(snn_T4),rate-coded,Converted-SNN,772008,2.5,N/A,ANN->SNN
+early_exit,modelnet40,ours_full@th=0.50,fps,SNN,1248296,3.12,16.0,Ours
+early_exit,modelnet40,ours_full@th=0.54,fps,SNN,1248296,2.34,16.0,Ours
+early_exit,modelnet40,ours_full@th=0.57,fps,SNN,1248296,3.91,16.0,Ours
+early_exit,modelnet40,ours_full@th=0.60,fps,SNN,1248296,2.34,16.0,Ours
+early_exit,modelnet40,ours_full@th=0.64,fps,SNN,1248296,1.56,16.0,Ours
+early_exit,modelnet40,ours_full@th=0.68,fps,SNN,1248296,2.34,16.0,Ours
+early_exit,modelnet40,ours_full@th=0.71,fps,SNN,1248296,1.56,16.0,Ours
+early_exit,modelnet40,ours_full@th=0.74,fps,SNN,1248296,1.56,16.0,Ours
+early_exit,modelnet40,ours_full@th=0.78,fps,SNN,1248296,0.0,16.0,Ours
+early_exit,modelnet40,ours_full@th=0.81,fps,SNN,1248296,1.56,16.0,Ours
+early_exit,modelnet40,ours_full@th=0.85,fps,SNN,1248296,1.56,16.0,Ours
+early_exit,modelnet40,ours_full@th=0.89,fps,SNN,1248296,1.56,16.0,Ours
+early_exit,modelnet40,ours_full@th=0.92,fps,SNN,1248296,2.34,16.0,Ours
+early_exit,modelnet40,ours_full@th=0.95,fps,SNN,1248296,3.91,16.0,Ours
+early_exit,modelnet40,ours_full@th=0.99,fps,SNN,1248296,1.56,16.0,Ours
+scaling,modelnet40,ours_base,radial,SNN,710952,2.5,N/A,Ours
+scaling,modelnet40,ours_base,fps,SNN,710952,2.5,N/A,Ours
+scaling,modelnet40,ours_full,radial,SNN,1248296,2.5,N/A,Ours
+scaling,modelnet40,ours_full,fps,SNN,1248296,2.5,N/A,Ours
+scaling,modelnet40,ours_large,fps,SNN,4921384,2.5,N/A,Ours
+scaling,modelnet40,ours_xl,fps,SNN,5973032,2.5,N/A,Ours
+scaling,modelnet40,ours_pct_snn,fps,SNN,1210664,2.5,N/A,Ours

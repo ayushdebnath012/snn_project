@@ -1,0 +1,90 @@
+[
+  {
+    "threshold": 0.0,
+    "accuracy": 0.6,
+    "mean_exit": 1.0,
+    "mean_fr": 0.342699920654297,
+    "energy_ratio": 0.005864656380244667,
+    "savings": 170.51297384933594
+  },
+  {
+    "threshold": 0.1,
+    "accuracy": 0.58,
+    "mean_exit": 1.17,
+    "mean_fr": 0.35328912350535413,
+    "energy_ratio": 0.00707366838804247,
+    "savings": 141.36936383537974
+  },
+  {
+    "threshold": 0.2,
+    "accuracy": 0.645,
+    "mean_exit": 1.325,
+    "mean_fr": 0.3537798462063075,
+    "energy_ratio": 0.008021905366917575,
+    "savings": 124.65866328017417
+  },
+  {
+    "threshold": 0.3,
+    "accuracy": 0.705,
+    "mean_exit": 1.515,
+    "mean_fr": 0.36421816007792956,
+    "energy_ratio": 0.009442843592199001,
+    "savings": 105.90030325463911
+  },
+  {
+    "threshold": 0.4,
+    "accuracy": 0.735,
+    "mean_exit": 1.71,
+    "mean_fr": 0.3633545788228511,
+    "energy_ratio": 0.010632987786534773,
+    "savings": 94.04694334986102
+  },
+  {
+    "threshold": 0.5,
+    "accuracy": 0.795,
+    "mean_exit": 1.91,
+    "mean_fr": 0.36801933491230016,
+    "energy_ratio": 0.012029084362126002,
+    "savings": 83.13184693828696
+  },
+  {
+    "threshold": 0.6,
+    "accuracy": 0.87,
+    "mean_exit": 2.215,
+    "mean_fr": 0.3732995676994324,
+    "energy_ratio": 0.014150108985452072,
+    "savings": 70.67083377436273
+  },
+  {
+    "threshold": 0.7,
+    "accuracy": 0.905,
+    "mean_exit": 2.435,
+    "mean_fr": 0.378732835263014,
+    "energy_ratio": 0.015781943778947247,
+    "savings": 63.36355103063903
+  },
+  {
+    "threshold": 0.8,
+    "accuracy": 0.925,
+    "mean_exit": 3.06,
+    "mean_fr": 0.3882668890804052,
+    "energy_ratio": 0.02033201164693372,
+    "savings": 49.183524845698706
+  },
+  {
+    "threshold": 0.9,
+    "accuracy": 0.95,
+    "mean_exit": 3.49,
+    "mean_fr": 0.39746224062144736,
+    "energy_ratio": 0.023738314028782428,
+    "savings": 42.125990868075625
+  },
+  {
+    "threshold": 1.0,
+    "accuracy": 0.935,
+    "mean_exit": 16.0,
+    "mean_fr": 0.4323350524902342,
+    "energy_ratio": 0.11837745484851651,
+    "savings": 8.447554488138515
+  }
+]

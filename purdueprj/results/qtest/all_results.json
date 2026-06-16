@@ -1,0 +1,167 @@
+[
+  {
+    "group": "comparison",
+    "dataset": "modelnet40",
+    "model": "ours_base",
+    "slicing": "radial",
+    "type": "SNN",
+    "params": 710952,
+    "val_acc": 3.12,
+    "mean_exit": 8.0,
+    "paper": "Ours"
+  },
+  {
+    "group": "comparison",
+    "dataset": "modelnet40",
+    "model": "ours_learnable",
+    "slicing": "fps",
+    "type": "SNN",
+    "params": 714792,
+    "val_acc": 4.69,
+    "mean_exit": 8.0,
+    "paper": "Ours"
+  },
+  {
+    "group": "comparison",
+    "dataset": "modelnet40",
+    "model": "ours_knn",
+    "slicing": "fps",
+    "type": "SNN",
+    "params": 720936,
+    "val_acc": 3.12,
+    "mean_exit": 8.0,
+    "paper": "Ours"
+  },
+  {
+    "group": "comparison",
+    "dataset": "modelnet40",
+    "model": "ours_bidir",
+    "slicing": "fps",
+    "type": "SNN",
+    "params": 1242152,
+    "val_acc": 5.47,
+    "mean_exit": 8.0,
+    "paper": "Ours"
+  },
+  {
+    "group": "comparison",
+    "dataset": "modelnet40",
+    "model": "ours_full",
+    "slicing": "fps",
+    "type": "SNN",
+    "params": 1248296,
+    "val_acc": 3.12,
+    "mean_exit": 8.0,
+    "paper": "Ours"
+  },
+  {
+    "group": "comparison",
+    "dataset": "modelnet40",
+    "model": "e3dsnn",
+    "slicing": "radial",
+    "type": "SNN",
+    "params": 110198,
+    "val_acc": 0.78,
+    "mean_exit": 8.0,
+    "paper": "E-3DSNN (2412.07360)"
+  },
+  {
+    "group": "comparison",
+    "dataset": "modelnet40",
+    "model": "spiking_ssm",
+    "slicing": "radial",
+    "type": "SNN",
+    "params": 236840,
+    "val_acc": 3.12,
+    "mean_exit": 8.0,
+    "paper": "SpikingSSMs (2408.14909)"
+  },
+  {
+    "group": "comparison",
+    "dataset": "modelnet40",
+    "model": "spt",
+    "slicing": "fps",
+    "type": "SNN",
+    "params": 175918,
+    "val_acc": 3.12,
+    "mean_exit": 8.0,
+    "paper": "SPT (2502.15811)"
+  },
+  {
+    "group": "scaling",
+    "dataset": "modelnet40",
+    "model": "ours_base",
+    "slicing": "radial",
+    "type": "SNN",
+    "params": 710952,
+    "val_acc": 2.5,
+    "mean_exit": "N/A",
+    "paper": "Ours"
+  },
+  {
+    "group": "scaling",
+    "dataset": "modelnet40",
+    "model": "ours_base",
+    "slicing": "fps",
+    "type": "SNN",
+    "params": 710952,
+    "val_acc": 2.5,
+    "mean_exit": "N/A",
+    "paper": "Ours"
+  },
+  {
+    "group": "scaling",
+    "dataset": "modelnet40",
+    "model": "ours_full",
+    "slicing": "radial",
+    "type": "SNN",
+    "params": 1248296,
+    "val_acc": 2.5,
+    "mean_exit": "N/A",
+    "paper": "Ours"
+  },
+  {
+    "group": "scaling",
+    "dataset": "modelnet40",
+    "model": "ours_full",
+    "slicing": "fps",
+    "type": "SNN",
+    "params": 1248296,
+    "val_acc": 2.5,
+    "mean_exit": "N/A",
+    "paper": "Ours"
+  },
+  {
+    "group": "scaling",
+    "dataset": "modelnet40",
+    "model": "ours_large",
+    "slicing": "fps",
+    "type": "SNN",
+    "params": 4921384,
+    "val_acc": 2.5,
+    "mean_exit": "N/A",
+    "paper": "Ours"
+  },
+  {
+    "group": "scaling",
+    "dataset": "modelnet40",
+    "model": "ours_xl",
+    "slicing": "fps",
+    "type": "SNN",
+    "params": 5973032,
+    "val_acc": 2.5,
+    "mean_exit": "N/A",
+    "paper": "Ours"
+  },
+  {
+    "group": "scaling",
+    "dataset": "modelnet40",
+    "model": "ours_pct_snn",
+    "slicing": "fps",
+    "type": "SNN",
+    "params": 1210664,
+    "val_acc": 2.5,
+    "mean_exit": "N/A",
+    "paper": "Ours"
+  }
+]

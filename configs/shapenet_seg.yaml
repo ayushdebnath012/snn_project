@@ -8,6 +8,9 @@ num_classes: 50
 num_categories: 16
 use_category: true
 in_channels: 6
+point_in_channels: 6
+use_normals: true
+val_fraction: 0.1
 
 # Slicing
 num_slices: 16
@@ -17,6 +20,9 @@ geo_dim: 8
 # Model
 feat_dim: 512
 hidden_dim: 512
+slice_pool: meanmax
+slice_token_dropout: 0.05
+context_ensemble: 3
 k_edge: 20
 transformer_heads: 4
 transformer_ffn_dim: 1024
@@ -24,22 +30,36 @@ num_lif_layers: 3
 lif_leak: 0.9
 lif_threshold: 1.0
 d_ssp: 128
-T: 6
+T: 8
+temporal_backend: lif
+point_feat_dim: 128
+seg_head_dropout: 0.1
 
 # Training
 epochs: 250
-batch_size: 32
-lr: 0.001
-encoder_lr_scale: 0.1
+batch_size: 32           # per-GPU; auto-scaled by GPU count in train_shapenet.py
+lr: 0.0003
+encoder_lr_scale: 1.0
 weight_decay: 0.01
 grad_clip: 1.0
 warmup_epochs: 10
-use_amp: true
+use_amp: true            # mixed precision (bfloat16 on Ampere+, float16 elsewhere)
+balanced_sampling: true
+balanced_sampling_power: 0.5
+early_stopping_patience: 50
+
+# GPU scalability
+grad_accum_steps: 1      # accumulate N micro-batches before optimizer.step()
+                         # effective_batch = batch_size * n_gpus * grad_accum_steps
+use_compile: false       # torch.compile (PyTorch >= 2.0, single GPU only)
+                         # set true on A100/H100 for ~15-25% free speedup
+prefetch_factor: 2       # DataLoader prefetch (ignored when num_workers=0)
+num_workers: 4           # I/O workers per DataLoader (use 0 on Windows)
 
 # Gumbel temperature
 tau_start: 1.0
 tau_end: 0.1
-tau_decay: 0.95
+tau_anneal_epochs: 200
 
 # Augmentation
 aug_rotate_so3: false
@@ -51,10 +71,14 @@ aug_jitter_sigma: 0.01
 aug_jitter_clip: 0.05
 aug_point_dropout: 0.1
 aug_slice_dropout: 0.05
+aug_anisotropic_scale: true
+aug_tilt: 0.05
+aug_elastic: false
 
 # Logging
 eval_interval: 5
+test_t_values: [6, 8, 12, 16]
 log_dir: logs
 ckpt_dir: checkpoints
 seed: 42
-num_workers: 8
+checkpoint_interval: 5

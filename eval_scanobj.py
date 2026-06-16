@@ -20,6 +20,15 @@ from datasets.slicing import compute_geo_torch
 from models.asp_classifier import ASPClassifier
 
 
+def aggregate_logits(logits_all, last_k: int = 1):
+    if not logits_all:
+        raise ValueError("ASPClassifier returned no logits")
+    last_k = max(1, min(int(last_k), len(logits_all)))
+    if last_k == 1:
+        return logits_all[-1]
+    return torch.stack(logits_all[-last_k:], dim=0).mean(dim=0)
+
+
 def augment_vote_gpu(slices, geo):
     """
     One random z-rotation augmentation on GPU tensors for TTA.
@@ -52,7 +61,7 @@ def augment_vote_gpu(slices, geo):
     return slices_aug, geo_aug
 
 
-def evaluate(model, loader, device, n_votes=1):
+def evaluate(model, loader, device, n_votes=1, logit_ensemble=1):
     """Evaluate with optional TTA."""
     model.eval()
     all_probs = []
@@ -66,7 +75,7 @@ def evaluate(model, loader, device, n_votes=1):
             geo = geo.to(device)
             B = slices.shape[0]
 
-            summed = torch.zeros(B, model.cfg.num_classes, device=device)
+            summed = torch.zeros(B, model.num_classes, device=device)
 
             for v in range(n_votes):
                 if v == 0:
@@ -75,7 +84,8 @@ def evaluate(model, loader, device, n_votes=1):
                     s_v, g_v = augment_vote_gpu(slices, geo)
 
                 logits_all = model(s_v, g_v, training=False)
-                summed += logits_all[-1].softmax(dim=-1)
+                logits = aggregate_logits(logits_all, logit_ensemble)
+                summed += logits.softmax(dim=-1)
 
                 if v == 0:
                     total_slices += len(logits_all) * B
@@ -111,14 +121,20 @@ def main():
     p = argparse.ArgumentParser(description="Evaluate ScanObjectNN")
     p.add_argument("--ckpt", type=str, required=True)
     p.add_argument("--config", type=str, default="configs/scanobj_cls.yaml")
-    p.add_argument("--n_votes", type=int, default=1,
-                   help="Number of TTA votes (1=no TTA)")
+    p.add_argument("--n_votes", type=int, default=None,
+                   help="Number of TTA votes (default: config n_votes)")
+    p.add_argument("--logit_ensemble", type=int, default=None,
+                   help="Average last K ASP timestep logits (default: config)")
     p.add_argument("--batch", type=int, default=None)
     args = p.parse_args()
 
     cfg = load_config(args.config)
     if args.batch:
         cfg.batch_size = args.batch
+    if args.n_votes is None:
+        args.n_votes = int(getattr(cfg, "n_votes", 1))
+    if args.logit_ensemble is None:
+        args.logit_ensemble = int(getattr(cfg, "logit_ensemble", 1))
     set_seed(cfg.seed)
     device = cfg.device
 
@@ -143,10 +159,11 @@ def main():
     print(f"Epoch      : {ckpt.get('epoch', '?')}")
     print(f"Parameters : {sum(p.numel() for p in model.parameters()):,}")
     print(f"TTA votes  : {args.n_votes}")
+    print(f"Logit avg  : last {args.logit_ensemble} ASP step(s)")
 
     # Evaluate
     oa, macc, per_class_acc, avg_slices = evaluate(
-        model, loader, device, args.n_votes
+        model, loader, device, args.n_votes, args.logit_ensemble
     )
 
     print(f"\n{'='*50}")
