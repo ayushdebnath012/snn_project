@@ -56,7 +56,10 @@ def _find_purdueprj():
             if "spiking_mamba.py" in files and os.path.basename(root) == "models":
                 return os.path.dirname(root)
     # Fallback: script running from inside the extracted project directory
-    script_dir = os.path.dirname(os.path.abspath(__file__))
+    try:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+    except NameError:
+        script_dir = os.getcwd()
     for rel in ("purdueprj", ""):
         p = os.path.join(script_dir, rel) if rel else script_dir
         if os.path.isfile(os.path.join(p, "models", "spiking_mamba.py")):
@@ -73,7 +76,11 @@ if ON_KAGGLE:
             "Searched recursively for models/spiking_mamba.py."
         )
 else:
-    PROJ = os.path.join(os.path.dirname(os.path.abspath(__file__)), "purdueprj")
+    try:
+        _script_dir = os.path.dirname(os.path.abspath(__file__))
+    except NameError:
+        _script_dir = os.getcwd()
+    PROJ = os.path.join(_script_dir, "purdueprj")
 
 print(f"Project root: {PROJ}")
 if PROJ not in sys.path:

@@ -58,7 +58,10 @@ def _find_proj_root(sentinel="train_shapenet.py"):
             if sentinel in files:
                 return root
     # Fallback: script running from inside the extracted project directory
-    script_dir = os.path.dirname(os.path.abspath(__file__))
+    try:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+    except NameError:
+        script_dir = os.getcwd()
     if os.path.isfile(os.path.join(script_dir, sentinel)):
         return script_dir
     return None
@@ -73,7 +76,10 @@ if ON_KAGGLE:
             "Searched recursively for train_shapenet.py."
         )
 else:
-    PROJ = os.path.dirname(os.path.abspath(__file__))
+    try:
+        PROJ = os.path.dirname(os.path.abspath(__file__))
+    except NameError:
+        PROJ = os.getcwd()
 
 print(f"Project root: {PROJ}")
 if PROJ not in sys.path:
