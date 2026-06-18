@@ -1,0 +1,26 @@
+group,dataset,model,slicing,type,params,val_acc,mean_exit,paper
+comparison,modelnet40,ours_base,radial,SNN,710952,1.56,16.0,Ours
+comparison,modelnet40,ours_learnable,fps,SNN,0,0,N/A,Ours
+comparison,modelnet40,ours_knn,fps,SNN,0,0,N/A,Ours
+comparison,modelnet40,ours_bidir,fps,SNN,0,0,N/A,Ours
+comparison,modelnet40,ours_full,fps,SNN,0,0,N/A,Ours
+comparison,modelnet40,e3dsnn,radial,SNN,110198,2.34,16.0,E-3DSNN (2412.07360)
+comparison,modelnet40,spiking_ssm,radial,SNN,0,0,N/A,SpikingSSMs (2408.14909)
+comparison,modelnet40,spt,fps,SNN,0,0,N/A,SPT (2502.15811)
+comparison,modelnet40,ann_pointnet,radial,ANN,710952,1.56,16.0,Ours (ANN)
+comparison,modelnet40,ann_dgcnn,radial,ANN,772008,3.91,16.0,DGCNN 2019
+comparison,modelnet40,ann_pct,radial,ANN,546856,0.0,16.0,PCT 2021
+comparison,modelnet40,ann_pointnetpp,radial,ANN,102248,4.69,16.0,PointNet++ 2017
+slicing,modelnet40,ours_full,radial,SNN,1248296,2.5,N/A,Ours
+slicing,modelnet40,ours_full,fps,SNN,1248296,2.5,N/A,Ours
+slicing,modelnet40,ours_large,radial,SNN,4921384,2.5,N/A,Ours
+slicing,modelnet40,ours_large,fps,SNN,4921384,2.5,N/A,Ours
+slicing,modelnet40,ann_pointnet,radial,ANN,710952,2.5,N/A,Ours (ANN)
+slicing,modelnet40,ann_pointnet,fps,ANN,710952,2.5,N/A,Ours (ANN)
+scaling,modelnet40,ours_base,radial,SNN,710952,2.5,N/A,Ours
+scaling,modelnet40,ours_base,fps,SNN,710952,2.5,N/A,Ours
+scaling,modelnet40,ours_full,radial,SNN,1248296,2.5,N/A,Ours
+scaling,modelnet40,ours_full,fps,SNN,1248296,2.5,N/A,Ours
+scaling,modelnet40,ours_large,fps,SNN,4921384,2.5,N/A,Ours
+scaling,modelnet40,ours_xl,fps,SNN,5973032,2.5,N/A,Ours
+scaling,modelnet40,ours_pct_snn,fps,SNN,1210664,2.5,N/A,Ours

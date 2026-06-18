@@ -42,4 +42,7 @@ class SSP(nn.Module):
         key   = self.key_proj(belief)                           # [B, d_ssp]
         query = self.query_proj(geo)                            # [B, M, d_ssp]
         scores = (query * key.unsqueeze(1)).sum(-1) * self.scale  # [B, M]
-        return scores.masked_fill(vis_mask, -1e9)
+        # Cast to float32 before masking so -1e9 stays finite (in float16 it
+        # would silently underflow to -inf, which breaks Gumbel-softmax when
+        # all slices are visited and causes NaN in the entropy diagnostic).
+        return scores.float().masked_fill(vis_mask, -1e9).to(query.dtype)

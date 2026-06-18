@@ -27,6 +27,16 @@ from models.asp_classifier import ASPClassifier
 _SWA_MIN_AVERAGING_EPOCHS = 10
 
 
+def aggregate_logits(logits_all, last_k: int = 1):
+    """Average the last ASP timestep logits for steadier evaluation."""
+    if not logits_all:
+        raise ValueError("ASPClassifier returned no logits")
+    last_k = max(1, min(int(last_k), len(logits_all)))
+    if last_k == 1:
+        return logits_all[-1]
+    return torch.stack(logits_all[-last_k:], dim=0).mean(dim=0)
+
+
 def main():
     parser = base_argparser("ASP-SNN ScanObjectNN Training")
     args = parser.parse_args()
@@ -208,7 +218,7 @@ def main():
         # ── Validation ────────────────────────────────────────────────
         eval_interval = getattr(cfg, 'eval_interval', 1)
         if (epoch + 1) % eval_interval == 0 or epoch == cfg.epochs - 1:
-            val_acc = _evaluate(model, val_loader, device)
+            val_acc = _evaluate(model, val_loader, device, cfg)
             elapsed = time.time() - t0
 
             print(
@@ -256,7 +266,7 @@ def main():
         print(f"\nSWA averaged {cfg.epochs - swa_start} epochs of training.")
         print("Updating SWA batch norm statistics ...")
         _update_bn(swa_model, train_loader, device)
-        swa_acc = _evaluate(swa_model, test_loader, device)
+        swa_acc = _evaluate(swa_model, test_loader, device, cfg)
         print(f"SWA test accuracy: {swa_acc*100:.2f}%")
         torch.save({
             'epoch': cfg.epochs,
@@ -269,22 +279,24 @@ def main():
     if os.path.exists(best_ckpt_path):
         best_ckpt = torch.load(best_ckpt_path, map_location=device, weights_only=False)
         model.load_state_dict(best_ckpt['model'])
-        test_acc = _evaluate(model, test_loader, device)
+        test_acc = _evaluate(model, test_loader, device, cfg)
         print(f"\nFinal test accuracy (best ckpt): {test_acc*100:.2f}%")
     print(f"Checkpoint: {best_ckpt_path}")
 
 
-def _evaluate(model, loader, device):
+def _evaluate(model, loader, device, cfg=None):
     """Evaluate classification accuracy."""
     model.eval()
     correct = total = 0
+    last_k = int(getattr(cfg, "logit_ensemble", 1)) if cfg is not None else 1
     with torch.no_grad():
         for slices, geo, labels in loader:
             slices = slices.to(device)
             geo = geo.to(device)
             labels = labels.to(device)
             logits_all = model(slices, geo, training=False)
-            preds = logits_all[-1].argmax(dim=-1)
+            logits = aggregate_logits(logits_all, last_k)
+            preds = logits.argmax(dim=-1)
             correct += (preds == labels).sum().item()
             total += labels.size(0)
     return correct / max(total, 1)

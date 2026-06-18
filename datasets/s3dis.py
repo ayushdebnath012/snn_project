@@ -285,7 +285,9 @@ class S3DISDataset(Dataset):
 
         # Augment (training only)
         if self.split == 'train' and self.cfg is not None:
-            slices, pts_features = augment_seg(slices, pts_features, self.cfg)
+            slices, pts_features, sem_labels, sid_arr = augment_seg(
+                slices, pts_features, self.cfg, sem_labels, sid_arr
+            )
             # P0 FIX: Recompute geo from augmented slices so positional encoding
             # and SSP see the same geometry as the encoder.
             geo = np.stack([compute_geo(s) for s in slices])

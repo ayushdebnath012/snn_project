@@ -2,7 +2,7 @@
 datasets/download.py — Download and prepare all three datasets.
 
 Download methods per dataset:
-    ShapeNetPart  : Stanford -> Google Drive -> Kaggle PartAnnotation
+    ShapeNetPart  : Direct wget from Stanford (no auth needed)
     ScanObjectNN  : HuggingFace mirror (no form needed) → gdown fallback
     S3DIS         : gdown from Google Drive (OpenPoints preprocessed) → manual fallback
 
@@ -17,13 +17,13 @@ Usage:
 """
 
 import argparse
+import glob
 import os
-import shutil
 import subprocess
 import sys
+import zipfile
 import tarfile
 import urllib.request
-import zipfile
 
 DATA_ROOT = "data"
 
@@ -35,40 +35,104 @@ DATA_ROOT = "data"
 SHAPENET_URL = "https://shapenet.cs.stanford.edu/media/shapenet_part_seg_hdf5_data.zip"
 # Public Google Drive mirror (used by PointNeXt and others)
 SHAPENET_GDRIVE_ID = "1tEnSGAdgfp-NPVS5y_ALD8eF18bzwhM_"
-SHAPENET_KAGGLE_SLUG = "majdouline20/shapenetpart-dataset"
-SHAPENET_KAGGLE_URL = (
-    "https://www.kaggle.com/datasets/majdouline20/shapenetpart-dataset"
-)
 SHAPENET_DIR = "shapenet_part_seg_hdf5_data"
+SHAPENET_RAW_DIR = "shapenetcore_partanno_segmentation_benchmark_v0_normal"
+SHAPENET_KAGGLE_SLUG = "mitkir/shapenet"
+
+
+def _shapenet_hdf5_ready(out_dir):
+    return (
+        os.path.exists(os.path.join(out_dir, "all_object_categories.txt"))
+        and glob.glob(os.path.join(out_dir, "train*.h5"))
+        and glob.glob(os.path.join(out_dir, "test*.h5"))
+    )
+
+
+def _shapenet_raw_ready(raw_dir):
+    split_dir = os.path.join(raw_dir, "train_test_split")
+    return (
+        os.path.exists(os.path.join(raw_dir, "synsetoffset2category.txt"))
+        and os.path.exists(os.path.join(split_dir, "shuffled_train_file_list.json"))
+        and os.path.exists(os.path.join(split_dir, "shuffled_val_file_list.json"))
+        and os.path.exists(os.path.join(split_dir, "shuffled_test_file_list.json"))
+    )
+
+
+def _find_shapenet_raw_dir():
+    preferred = os.path.join(DATA_ROOT, SHAPENET_RAW_DIR)
+    if _shapenet_raw_ready(preferred):
+        return preferred
+    for cand in glob.glob(os.path.join(DATA_ROOT, "shapenetcore*")):
+        if os.path.isdir(cand) and _shapenet_raw_ready(cand):
+            return cand
+    return None
+
+
+def _convert_shapenet_raw(raw_dir, out_dir):
+    print(f"[ShapeNet] Converting raw Kaggle data from {raw_dir} ...")
+    subprocess.run([
+        sys.executable,
+        os.path.join("datasets", "convert_shapenet_raw.py"),
+        "--raw_dir", raw_dir,
+        "--out_dir", out_dir,
+    ], check=True)
+    return _shapenet_hdf5_ready(out_dir)
+
+
+def _download_shapenet_from_kaggle(out_dir):
+    print(f"[ShapeNet] Trying Kaggle raw mirror ({SHAPENET_KAGGLE_SLUG}) ...")
+    try:
+        from kaggle.api.kaggle_api_extended import KaggleApi
+    except ImportError:
+        print("[ShapeNet] Kaggle package not installed (pip install kaggle)")
+        return False
+
+    try:
+        api = KaggleApi()
+        api.authenticate()
+        api.dataset_download_files(
+            SHAPENET_KAGGLE_SLUG,
+            path=DATA_ROOT,
+            force=True,
+            quiet=False,
+            unzip=True,
+        )
+    except Exception as e:
+        print(f"[ShapeNet] Kaggle failed: {e}")
+        return False
+
+    raw_dir = _find_shapenet_raw_dir()
+    if raw_dir is None:
+        print("[ShapeNet] Kaggle download finished, but raw split JSONs were not found")
+        return False
+    return _convert_shapenet_raw(raw_dir, out_dir)
 
 
 def download_shapenet():
     """
     ShapeNetPart HDF5 — multi-source download.
     Tries in order:
-      0. Cached kagglehub archive (stream to HDF5, no extraction needed)
       1. Stanford direct URL
       2. Google Drive mirror via gdown
-      3. Kaggle raw PartAnnotation download + conversion
+      3. Existing/Kaggle raw ShapeNetPart + conversion
       4. Manual instructions
     """
     out_dir = os.path.join(DATA_ROOT, SHAPENET_DIR)
-    sentinel = os.path.join(out_dir, "all_object_categories.txt")
 
-    if os.path.exists(sentinel):
+    if _shapenet_hdf5_ready(out_dir):
         print(f"[ShapeNet] Already present at {out_dir}")
         return True
 
     os.makedirs(DATA_ROOT, exist_ok=True)
 
-    # ── Method 0: cached kagglehub archive (fastest, no extraction) ────
-    archive_path = _find_kagglehub_cached_archive()
-    if archive_path:
-        mb = os.path.getsize(archive_path) // 1_000_000
-        print(f"[ShapeNet] Cached archive found ({mb} MB) — streaming to HDF5 "
-              "(no extraction needed)...")
-        if _stream_convert_shapenet(archive_path, out_dir):
-            return True
+    raw_dir = _find_shapenet_raw_dir()
+    if raw_dir is not None:
+        try:
+            if _convert_shapenet_raw(raw_dir, out_dir):
+                print(f"[ShapeNet] Done (converted existing raw data)")
+                return True
+        except Exception as e:
+            print(f"[ShapeNet] Existing raw conversion failed: {e}")
 
     # ── Method 1: Stanford direct ──────────────────────────────────────
     print(f"[ShapeNet] Trying Stanford direct ({SHAPENET_URL}) ...")
@@ -79,7 +143,7 @@ def download_shapenet():
         with zipfile.ZipFile(zip_path, 'r') as zf:
             zf.extractall(DATA_ROOT)
         os.remove(zip_path)
-        if os.path.exists(sentinel):
+        if _shapenet_hdf5_ready(out_dir):
             print(f"[ShapeNet] Done (from Stanford)")
             return True
     except Exception as e:
@@ -97,7 +161,7 @@ def download_shapenet():
             with zipfile.ZipFile(zip_path, 'r') as zf:
                 zf.extractall(DATA_ROOT)
             os.remove(zip_path)
-            if os.path.exists(sentinel):
+            if _shapenet_hdf5_ready(out_dir):
                 print(f"[ShapeNet] Done (from gdown mirror)")
                 return True
     except ImportError:
@@ -107,29 +171,30 @@ def download_shapenet():
         if os.path.exists(zip_path):
             os.remove(zip_path)
 
-    # ── Method 3: Manual instructions ──────────────────────────────────
-    print(f"[ShapeNet] Trying Kaggle dataset ({SHAPENET_KAGGLE_SLUG}) ...")
+    # ── Method 3: Kaggle raw mirror + converter ────────────────────────
     try:
-        if download_shapenet_kaggle():
+        if _download_shapenet_from_kaggle(out_dir):
+            print(f"[ShapeNet] Done (from Kaggle raw mirror)")
             return True
     except Exception as e:
-        print(f"[ShapeNet] Kaggle failed: {e}")
+        print(f"[ShapeNet] Kaggle conversion failed: {e}")
 
+    # ── Manual instructions ────────────────────────────────────────────
     print()
     print("=" * 60)
     print("  ShapeNetPart auto-download failed from all sources")
     print("=" * 60)
     print()
     print("  Option A: Download from Kaggle and convert to HDF5")
-    print("    1. Install dependencies:  pip install kagglehub kaggle")
-    print("    2. If needed, set up Kaggle API credentials:")
-    print("       https://www.kaggle.com/docs/api")
-    print(f"    3. Dataset: {SHAPENET_KAGGLE_URL}")
-    print("    4. Re-run:")
-    print("       python datasets/download.py --shapenet_kaggle")
-    print("    5. Or convert an already extracted raw folder:")
+    print("    1. Install Kaggle CLI:    pip install kaggle")
+    print("    2. Set up API key:        https://www.kaggle.com/docs/api")
+    print("    3. Download the raw ShapeNetPart mirror:")
+    print("       kaggle datasets download -d mitkir/shapenet -p data/ --unzip")
+    print("    4. Confirm this exists before conversion:")
+    print("       data/shapenetcore_partanno_segmentation_benchmark_v0_normal/train_test_split/")
+    print("    5. Convert to HDF5:")
     print("       python datasets/convert_shapenet_raw.py \\")
-    print("           --raw_dir data/PartAnnotation \\")
+    print("           --raw_dir data/shapenetcore_partanno_segmentation_benchmark_v0_normal \\")
     print("           --out_dir data/shapenet_part_seg_hdf5_data")
     print()
     print("  Option B: Manual Stanford download")
@@ -138,222 +203,6 @@ def download_shapenet():
     print(f"    3. Re-run: python datasets/download.py --shapenet")
     print()
     return False
-
-
-def _find_kagglehub_cached_archive():
-    """Return the path to a cached kagglehub archive for ShapeNetPart, or None."""
-    owner, dataset = SHAPENET_KAGGLE_SLUG.split("/")
-    dataset_dir = os.path.join(
-        os.path.expanduser("~"), ".cache", "kagglehub", "datasets", owner, dataset
-    )
-    if not os.path.isdir(dataset_dir):
-        return None
-    for fname in sorted(os.listdir(dataset_dir), reverse=True):
-        if fname.endswith(".archive"):
-            path = os.path.join(dataset_dir, fname)
-            if os.path.getsize(path) > 100_000_000:  # at least 100 MB = real archive
-                return path
-    return None
-
-
-def _stream_convert_shapenet(archive_path: str, out_dir: str) -> bool:
-    """Convert a cached kagglehub archive to HDF5 using the streaming path."""
-    sentinel = os.path.join(out_dir, "all_object_categories.txt")
-    try:
-        try:
-            from datasets.convert_shapenet_raw import (
-                convert_shapenet_archive_streaming, write_metadata,
-            )
-        except ImportError:
-            from convert_shapenet_raw import (
-                convert_shapenet_archive_streaming, write_metadata,
-            )
-        if os.path.isdir(out_dir):
-            shutil.rmtree(out_dir)
-        os.makedirs(out_dir, exist_ok=True)
-        n_tr, n_te = convert_shapenet_archive_streaming(archive_path, out_dir)
-        if os.path.exists(sentinel) and n_tr > 0 and n_te > 0:
-            print(f"[ShapeNet] Done via streaming: {n_tr} train + {n_te} test")
-            return True
-    except Exception as e:
-        print(f"[ShapeNet] Streaming conversion failed: {e}")
-    return False
-
-
-def download_shapenet_kaggle():
-    """
-    Download the Kaggle ShapeNetPart PartAnnotation dataset and convert it.
-
-    Tries in order:
-      1. Streaming conversion from a pre-cached archive (no extraction needed)
-      2. kagglehub download + full extraction (first-time, enough disk space)
-      3. Streaming conversion from newly-downloaded archive (extraction failed)
-      4. Kaggle CLI extraction
-    """
-    out_dir = os.path.join(DATA_ROOT, SHAPENET_DIR)
-    sentinel = os.path.join(out_dir, "all_object_categories.txt")
-    if os.path.exists(sentinel):
-        print(f"[ShapeNet] Already present at {out_dir}")
-        return True
-
-    os.makedirs(DATA_ROOT, exist_ok=True)
-
-    # ── Fast path: archive already cached → skip 2.3 GB extraction entirely ──
-    archive_path = _find_kagglehub_cached_archive()
-    if archive_path:
-        mb = os.path.getsize(archive_path) // 1_000_000
-        print(f"[ShapeNet] Cached archive found ({mb} MB) — streaming to HDF5 "
-              "(no extraction needed)...")
-        if _stream_convert_shapenet(archive_path, out_dir):
-            return True
-
-    # ── Normal path: download + extract via kagglehub ─────────────────────────
-    download_root = os.path.join(DATA_ROOT, "_kaggle_shapenetpart")
-    os.makedirs(download_root, exist_ok=True)
-
-    raw_dir = None
-    try:
-        import kagglehub
-        print("[ShapeNet] Downloading Kaggle dataset with kagglehub ...")
-        kaggle_path = kagglehub.dataset_download(SHAPENET_KAGGLE_SLUG)
-        raw_dir = _find_shapenet_raw_dir(kaggle_path)
-        if raw_dir is None:
-            print(f"[ShapeNet] Could not find PartAnnotation under {kaggle_path}")
-    except ImportError:
-        print("[ShapeNet] kagglehub not installed (pip install kagglehub)")
-    except Exception as e:
-        print(f"[ShapeNet] kagglehub failed: {e}")
-
-    # Extraction succeeded → use disk-based converter
-    if raw_dir is not None:
-        return prepare_shapenet_raw(raw_dir)
-
-    # Extraction failed (disk full?) → try streaming from newly-cached archive
-    archive_path = _find_kagglehub_cached_archive()
-    if archive_path:
-        if _stream_convert_shapenet(archive_path, out_dir):
-            return True
-
-    raw_dir = _download_shapenet_with_kaggle_cli(download_root)
-
-    if raw_dir is None:
-        print("[ShapeNet] Kaggle download did not produce a raw PartAnnotation folder.")
-        return False
-
-    return prepare_shapenet_raw(raw_dir)
-
-
-def _download_shapenet_with_kaggle_cli(download_root: str):
-    """Download the Kaggle dataset with the official Kaggle CLI."""
-    print("[ShapeNet] Trying Kaggle CLI ...")
-    kaggle_cmd = _kaggle_cli_command()
-    if kaggle_cmd is None:
-        print("[ShapeNet] kaggle CLI not found (pip install kaggle)")
-        return None
-
-    cmd = kaggle_cmd + [
-        "datasets",
-        "download",
-        "-d",
-        SHAPENET_KAGGLE_SLUG,
-        "-p",
-        download_root,
-        "--unzip",
-    ]
-    try:
-        subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"[ShapeNet] Kaggle CLI failed with exit code {e.returncode}")
-        return None
-
-    return _find_shapenet_raw_dir(download_root)
-
-
-def _kaggle_cli_command():
-    """Return a command prefix for the Kaggle CLI, including Windows user scripts."""
-    for name in ("kaggle", "kaggle.exe"):
-        exe = shutil.which(name)
-        if exe:
-            return [exe]
-
-    candidates = []
-    if os.name == "nt":
-        candidates.append(
-            os.path.join(
-                os.path.expanduser("~"),
-                "AppData",
-                "Roaming",
-                "Python",
-                f"Python{sys.version_info.major}{sys.version_info.minor}",
-                "Scripts",
-                "kaggle.exe",
-            )
-        )
-        candidates.append(
-            os.path.join(os.path.dirname(sys.executable), "Scripts", "kaggle.exe")
-        )
-
-    for exe in candidates:
-        if os.path.exists(exe):
-            return [exe]
-    return None
-
-
-def prepare_shapenet_raw(raw_dir: str):
-    """Convert an extracted ShapeNetPart PartAnnotation folder to HDF5."""
-    raw_dir = _find_shapenet_raw_dir(raw_dir)
-    if raw_dir is None:
-        print("[ShapeNet] Could not find raw ShapeNetPart PartAnnotation files.")
-        return False
-
-    out_dir = os.path.join(DATA_ROOT, SHAPENET_DIR)
-    sentinel = os.path.join(out_dir, "all_object_categories.txt")
-    print(f"[ShapeNet] Converting raw PartAnnotation from {raw_dir}")
-
-    try:
-        from datasets.convert_shapenet_raw import convert_split, write_metadata
-    except Exception:
-        from convert_shapenet_raw import convert_split, write_metadata
-
-    if os.path.isdir(out_dir):
-        shutil.rmtree(out_dir)
-    os.makedirs(out_dir, exist_ok=True)
-
-    n_train = convert_split(raw_dir, out_dir, "train", "train")
-    n_val = convert_split(raw_dir, out_dir, "val", "train")
-    n_test = convert_split(raw_dir, out_dir, "test", "test")
-    write_metadata(out_dir)
-
-    if os.path.exists(sentinel) and n_train + n_val > 0 and n_test > 0:
-        print(
-            f"[ShapeNet] Ready at {out_dir}: "
-            f"{n_train + n_val} train/val + {n_test} test shapes"
-        )
-        return True
-
-    print("[ShapeNet] Conversion finished but no usable train/test H5 files were written.")
-    return False
-
-
-def _find_shapenet_raw_dir(root: str):
-    """Find a raw ShapeNetPart folder containing synset dirs and split JSONs."""
-    if not root or not os.path.exists(root):
-        return None
-
-    expected_synsets = {
-        "02691156", "02773838", "02954340", "02958343",
-        "03001627", "03261776", "03467517", "03624134",
-        "03636649", "03642806", "03790512", "03797390",
-        "03948459", "04099429", "04225987", "04379243",
-    }
-    for cur, dirs, files in os.walk(root):
-        has_splits = "train_test_split" in dirs
-        synset_hits = len(expected_synsets.intersection(dirs))
-        if has_splits and synset_hits >= 8:
-            return cur
-        if "synsetoffset2category.txt" in files and synset_hits >= 8:
-            return cur
-    return None
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -669,8 +518,6 @@ def main():
 Examples:
     python datasets/download.py --all
     python datasets/download.py --scanobj
-    python datasets/download.py --shapenet_kaggle
-    python datasets/download.py --shapenet_raw /data/PartAnnotation
     python datasets/download.py --s3dis_preprocess /data/Stanford3dDataset_v1.2_Aligned_Version
         """,
     )
@@ -678,10 +525,6 @@ Examples:
                    help="Download all three datasets")
     p.add_argument("--shapenet", action="store_true",
                    help="Download ShapeNetPart HDF5")
-    p.add_argument("--shapenet_kaggle", action="store_true",
-                   help="Download ShapeNetPart from Kaggle and convert to HDF5")
-    p.add_argument("--shapenet_raw", type=str, default=None,
-                   help="Convert local raw ShapeNetPart PartAnnotation to HDF5")
     p.add_argument("--scanobj", action="store_true",
                    help="Download ScanObjectNN PB_T50_RS")
     p.add_argument("--s3dis", action="store_true",
@@ -695,23 +538,10 @@ Examples:
         preprocess_s3dis_raw(args.s3dis_preprocess)
         return
 
-    if args.shapenet_raw:
-        ok = prepare_shapenet_raw(args.shapenet_raw)
-        print()
-        print("=" * 60)
-        print("  Download Summary")
-        print("=" * 60)
-        print(f"  {'ShapeNetPart':<15} {'READY' if ok else 'NEEDS ATTENTION'}")
-        print("=" * 60)
-        return
-
     results = {}
 
     if args.all or args.shapenet:
         results['ShapeNetPart'] = download_shapenet()
-
-    if args.shapenet_kaggle:
-        results['ShapeNetPart'] = download_shapenet_kaggle()
 
     if args.all or args.scanobj:
         results['ScanObjectNN'] = download_scanobjectnn()
@@ -719,13 +549,7 @@ Examples:
     if args.all or args.s3dis:
         results['S3DIS'] = download_s3dis()
 
-    if not any([
-        args.all,
-        args.shapenet,
-        args.shapenet_kaggle,
-        args.scanobj,
-        args.s3dis,
-    ]):
+    if not any([args.all, args.shapenet, args.scanobj, args.s3dis]):
         p.print_help()
         return
 

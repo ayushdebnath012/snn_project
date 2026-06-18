@@ -1,13 +1,36 @@
+# Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*.egg-info/
+.env
+
+# Large model checkpoints (too big for GitHub)
+a100_ckpts/*.pth
+a100_ckpts/*_latest.pt
 checkpoints/
 logs/
-data/
-cache/
-*.tar.gz
+
+# Generated datasets
+data/shapenet_part_seg_hdf5_data/
+data/shapenetcore_partanno_segmentation_benchmark_v0_normal/
+
+# LaTeX auxiliary files
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.blg
+*.bbl
+
+# Archives
 *.zip
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# OS
 .DS_Store
-*.egg-info/
-dist/
-build/
+desktop.ini

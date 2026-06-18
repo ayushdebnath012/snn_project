@@ -22,6 +22,45 @@ from datasets.s3dis import S3DISDataset, CLASS_NAMES, NUM_CLASSES, compute_class
 from models.asp_segmentor import ASPSegmentor
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+#  KD teacher (PointNet-style per-point segmentation)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class PointNetSegTeacher(nn.Module):
+    """Lightweight PointNet segmentation teacher for knowledge distillation."""
+    def __init__(self, num_classes: int, in_channels: int = 7):
+        super().__init__()
+        self.local_mlp = nn.Sequential(
+            nn.Conv1d(in_channels, 64, 1), nn.BatchNorm1d(64), nn.ReLU(),
+            nn.Conv1d(64, 128, 1), nn.BatchNorm1d(128), nn.ReLU(),
+        )
+        self.global_mlp = nn.Sequential(
+            nn.Conv1d(128, 1024, 1), nn.BatchNorm1d(1024), nn.ReLU(),
+        )
+        self.seg_head = nn.Sequential(
+            nn.Conv1d(1024 + 128, 512, 1), nn.BatchNorm1d(512), nn.ReLU(),
+            nn.Conv1d(512, 256, 1), nn.BatchNorm1d(256), nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Conv1d(256, num_classes, 1),
+        )
+
+    def forward(self, pts_feat):  # [B, N, C]
+        x = pts_feat.permute(0, 2, 1)   # [B, C, N]
+        local_feat = self.local_mlp(x)  # [B, 128, N]
+        global_feat = self.global_mlp(local_feat).max(dim=-1, keepdim=True).values  # [B, 1024, 1]
+        global_feat = global_feat.expand(-1, -1, local_feat.size(-1))  # [B, 1024, N]
+        combined = torch.cat([local_feat, global_feat], dim=1)  # [B, 1152, N]
+        return self.seg_head(combined).permute(0, 2, 1)  # [B, N, num_classes]
+
+
+def seg_kd_loss(student_logits, teacher_logits, T: float = 4.0) -> torch.Tensor:
+    """Per-point KL divergence loss for segmentation KD."""
+    B, N, C = student_logits.shape
+    s = F.log_softmax(student_logits.reshape(B * N, C) / T, dim=-1)
+    t = F.softmax(teacher_logits.detach().reshape(B * N, C) / T, dim=-1)
+    return F.kl_div(s, t, reduction="batchmean") * (T * T)
+
+
 def compute_iou(pred: np.ndarray, target: np.ndarray, num_classes: int):
     """Compute per-class IoU, mIoU, OA, and mAcc."""
     ious = []
@@ -109,6 +148,39 @@ def main():
     cfg.use_category = False
     cfg.num_categories = 0
 
+    # ── KD teacher (optional) ─────────────────────────────────────────
+    kd_teacher_epochs = int(getattr(cfg, 'kd_teacher_epochs', 0))
+    kd_temp = float(getattr(cfg, 'kd_temp', 4.0))
+    kd_lam  = float(getattr(cfg, 'kd_lam', 0.5))
+    kd_teacher = None
+    if kd_teacher_epochs > 0:
+        print(f"\n[KD] Pre-training PointNet seg teacher ({kd_teacher_epochs} ep, T={kd_temp}, λ={kd_lam})")
+        kd_teacher = PointNetSegTeacher(NUM_CLASSES, in_channels=in_ch).to(device)
+        kd_teacher.train()
+        t_opt = torch.optim.AdamW(kd_teacher.parameters(), lr=1e-3, weight_decay=1e-4)
+        t_sch = torch.optim.lr_scheduler.CosineAnnealingLR(t_opt, T_max=kd_teacher_epochs, eta_min=1e-5)
+        t_criterion = nn.CrossEntropyLoss(weight=class_weights, ignore_index=-1)
+        for t_ep in range(kd_teacher_epochs):
+            t_loss_sum = t_n = 0
+            for slices_b, geo_b, pts_feat_b, sid_b, sem_labels_b, cat_b in train_loader:
+                pts_feat_b  = pts_feat_b.to(device, non_blocking=True)
+                sem_labels_b = sem_labels_b.to(device, non_blocking=True)
+                t_logits = kd_teacher(pts_feat_b)  # [B, N, 13]
+                B, N, C = t_logits.shape
+                t_loss = t_criterion(t_logits.reshape(B*N, C), sem_labels_b.reshape(B*N))
+                t_opt.zero_grad(); t_loss.backward()
+                nn.utils.clip_grad_norm_(kd_teacher.parameters(), 1.0)
+                t_opt.step()
+                t_loss_sum += float(t_loss.detach()) * B
+                t_n        += B
+            t_sch.step()
+            if (t_ep + 1) % 10 == 0:
+                print(f"  [Teacher] Ep {t_ep+1:2d}/{kd_teacher_epochs}  loss={t_loss_sum/t_n:.4f}")
+        kd_teacher.eval()
+        teacher_ckpt = os.path.join(cfg.ckpt_dir, "s3dis_teacher.pth")
+        torch.save(kd_teacher.state_dict(), teacher_ckpt)
+        print(f"[KD] Teacher saved → {teacher_ckpt}")
+
     model = ASPSegmentor(cfg).to(device)
     n_params = sum(p.numel() for p in model.parameters())
     print(f"Parameters: {n_params:,}")
@@ -186,6 +258,10 @@ def main():
                     logits.reshape(B * N, C),
                     sem_labels.reshape(B * N),
                 )
+                if kd_teacher is not None:
+                    with torch.no_grad():
+                        t_logits = kd_teacher(pts_feat)
+                    loss = loss + kd_lam * seg_kd_loss(logits, t_logits, kd_temp)
 
             optimizer.zero_grad()
             scaler.scale(loss).backward()
