@@ -17,17 +17,20 @@ separate GPUs via SLURM.
 
 ## Foveated ImageNet Quickstart
 
-The foveated transformer extension is available on `main`.
+The foveated transformer extension lives on the
+`codex/foveater-imagenet-asp` branch until it is merged into `main`.
 
 ```bash
 git clone https://github.com/AryaPawa/ASP-SNN.git
 cd ASP-SNN
+git fetch origin
+git switch codex/foveater-imagenet-asp
 ```
 
 Important files:
 - `models/foveater_asp.py` - FoveaTer-style image ASP model
 - `train_imagenet_foveater.py` - ImageNet/ImageNet-100 training script
-- `configs/imagenet_foveater.yaml` - default 500-epoch training config
+- `configs/imagenet_foveater.yaml` - default training config
 - `datasets/imagenet.py` - ImageFolder dataloader
 - `scripts/run_imagenet_foveater.sh` - shell helper
 
@@ -47,7 +50,7 @@ Train on ImageNet:
 ```bash
 python train_imagenet_foveater.py \
   --config configs/imagenet_foveater.yaml \
-  --set data_dir=/path/to/imagenet num_classes=1000 batch_size=128 epochs=500
+  --set data_dir=/path/to/imagenet num_classes=1000 batch_size=128
 ```
 
 Train on ImageNet-100:
@@ -55,7 +58,7 @@ Train on ImageNet-100:
 ```bash
 python train_imagenet_foveater.py \
   --config configs/imagenet_foveater.yaml \
-  --set data_dir=/path/to/imagenet100 num_classes=100 batch_size=128 epochs=500
+  --set data_dir=/path/to/imagenet100 num_classes=100 batch_size=128
 ```
 
 Expected dataset layout is standard `torchvision.datasets.ImageFolder`:
@@ -64,277 +67,6 @@ Expected dataset layout is standard `torchvision.datasets.ImageFolder`:
 data/imagenet/
   train/class_name_or_wnid/*.JPEG
   val/class_name_or_wnid/*.JPEG
-```
-
----
-
-## Environment And Self-Check
-
-You do **not** have to create a new conda environment if your current
-environment already has the required packages. If you are already using an
-environment for Akarsh's code, try these checks first from the repo root:
-
-```bash
-cd ASP-SNN
-python --version
-python -c "import torch, torchvision, yaml, numpy; print(torch.__version__); print(torchvision.__version__); print('CUDA:', torch.cuda.is_available())"
-python smoke_test.py
-```
-
-If `python smoke_test.py` prints `ALL 8 TESTS PASSED`, the current environment
-is good for code sanity checks and CPU smoke runs.
-
-For real GPU training, also make sure CUDA PyTorch is visible:
-
-```bash
-python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.device_count())"
-```
-
-If that prints `False` or `0`, the code can still run CPU smoke tests, but
-full training should be run in a CUDA-enabled environment.
-
-If your current environment fails imports or does not have CUDA PyTorch, create
-the provided environment:
-
-```bash
-cd ASP-SNN
-bash setup.sh
-conda activate asp-snn
-python smoke_test.py
-```
-
-### Checks Already Run By Us
-
-From `ASP-SNN/`, on the current checkout, we verified:
-
-```bash
-python smoke_test.py
-```
-
-Result: `ALL 8 TESTS PASSED`
-
-We also verified the FoveaTer/ImageNet synthetic smoke-training path:
-
-```bash
-python train_imagenet_foveater.py --config configs/imagenet_foveater.yaml \
-  --set smoke=true epochs=1 batch_size=2 image_size=64 feature_grid=4 \
-        embed_dim=48 depth=1 max_fixations=2 max_tokens=8 debug_steps=1 \
-        num_workers=0 use_amp=false num_classes=10 verbose_every=1
-```
-
-Result: completed one synthetic training/eval pass successfully.
-
-Local limitation: this verification machine had CPU-only PyTorch
-(`torch.cuda.is_available() == False`), so GPU execution and real-dataset
-training must be checked on the target GPU machine after datasets are present.
-
----
-
-## Exact Run Commands By Dataset
-
-Run every command in this section from the repository root folder:
-
-```bash
-git clone https://github.com/AryaPawa/ASP-SNN.git
-cd ASP-SNN
-```
-
-If your current environment passed the checks above, keep using it. Otherwise
-create and activate the provided environment:
-
-```bash
-bash setup.sh
-conda activate asp-snn
-```
-
-### No-Dataset CPU Smoke Test
-
-From folder: `ASP-SNN/`
-
-```bash
-python smoke_test.py
-```
-
-Expected result:
-
-```text
-ALL 8 TESTS PASSED
-```
-
-### ShapeNetPart Segmentation
-
-From folder: `ASP-SNN/`
-
-Download ShapeNetPart:
-
-```bash
-python datasets/download.py --shapenet
-```
-
-If the Stanford link is slow/down, use the Kaggle dataset
-`majdouline20/shapenetpart-dataset`. That Kaggle copy is the raw
-`PartAnnotation` layout, so the downloader converts it to the HDF5 format
-expected by `train_shapenet.py`:
-
-```bash
-python datasets/download.py --shapenet_kaggle
-```
-
-If the Kaggle data is already downloaded/extracted:
-
-```bash
-python datasets/download.py --shapenet_raw /path/to/PartAnnotation_or_parent_folder
-```
-
-Quick 2-epoch smoke training:
-
-```bash
-python train_shapenet.py --config configs/shapenet_seg.yaml \
-  --set epochs=2 batch_size=4 num_workers=0 eval_interval=1
-```
-
-Full training:
-
-```bash
-bash scripts/train_shapenet_full.sh
-```
-
-Evaluate:
-
-```bash
-python eval_shapenet.py --ckpt checkpoints/shapenet_best.pt --config configs/shapenet_seg.yaml --per_cat
-```
-
-### ScanObjectNN Classification
-
-From folder: `ASP-SNN/`
-
-Download ScanObjectNN:
-
-```bash
-python datasets/download.py --scanobj
-```
-
-Quick 2-epoch smoke training:
-
-```bash
-python train_scanobj.py --config configs/scanobj_cls.yaml \
-  --set epochs=2 batch_size=4 num_workers=0 eval_interval=1
-```
-
-Full training:
-
-```bash
-bash scripts/train_scanobj_full.sh
-```
-
-Evaluate:
-
-```bash
-python eval_scanobj.py --ckpt checkpoints/scanobj_best.pt --config configs/scanobj_cls.yaml --n_votes 1
-```
-
-Use `--n_votes 10` only as an optional TTA check after the no-TTA number is
-healthy. If an older run produced about 30-40% test accuracy after high train
-accuracy, discard that checkpoint and retrain; the current code recomputes
-geometry after train augmentation and TTA.
-
-### S3DIS Semantic Segmentation
-
-From folder: `ASP-SNN/`
-
-Download S3DIS:
-
-```bash
-python datasets/download.py --s3dis
-```
-
-Quick 2-epoch smoke training:
-
-```bash
-python train_s3dis.py --config configs/s3dis_seg.yaml \
-  --set epochs=2 batch_size=4 num_workers=0 eval_interval=1
-```
-
-Full training:
-
-```bash
-bash scripts/train_s3dis_full.sh
-```
-
-The default S3DIS protocol is Area-5 testing: the model trains on Areas
-1,2,3,4,6 and evaluates on Area 5. The header now prints both lists. The
-default S3DIS batch size is 64 for H100-style 80 GB GPUs; lower it with
-`BATCH_SIZE=32 bash scripts/train_s3dis_full.sh` if needed.
-
-Evaluate:
-
-```bash
-python eval_s3dis.py --ckpt checkpoints/s3dis_best.pt --config configs/s3dis_seg.yaml --per_class
-```
-
-### ImageNet Or ImageNet-100 FoveaTer ASP
-
-From folder: `ASP-SNN/`
-
-First arrange data manually in ImageFolder format:
-
-```text
-/path/to/imagenet/
-  train/class_name_or_wnid/*.JPEG
-  val/class_name_or_wnid/*.JPEG
-```
-
-Synthetic smoke training without ImageNet:
-
-```bash
-python train_imagenet_foveater.py --config configs/imagenet_foveater.yaml \
-  --set smoke=true epochs=1 batch_size=2 image_size=64 feature_grid=4 \
-        embed_dim=48 depth=1 max_fixations=2 max_tokens=8 debug_steps=1 \
-        num_workers=0 use_amp=false num_classes=10
-```
-
-Train on full ImageNet:
-
-```bash
-python train_imagenet_foveater.py --config configs/imagenet_foveater.yaml \
-  --set data_dir=/path/to/imagenet num_classes=1000 batch_size=128 epochs=500
-```
-
-Train on ImageNet-100:
-
-```bash
-python train_imagenet_foveater.py --config configs/imagenet_foveater.yaml \
-  --set data_dir=/path/to/imagenet100 num_classes=100 batch_size=128 epochs=500
-```
-
-### Parallel GPU Smoke Training
-
-From folder: `ASP-SNN/`
-
-Run quick smoke-training jobs in parallel on GPUs 0, 1, 2, and 3:
-
-```bash
-bash scripts/smoke_train_parallel.sh
-```
-
-Choose GPU IDs explicitly:
-
-```bash
-GPU_SHAPENET=0 GPU_SCANOBJ=1 GPU_S3DIS=2 GPU_FOVEATER=3 \
-  bash scripts/smoke_train_parallel.sh
-```
-
-Manual parallel full training:
-
-```bash
-GPU_SHAPENET=0 GPU_SCANOBJ=1 GPU_S3DIS=2 bash scripts/train_pointclouds_parallel.sh &
-PID_PC=$!
-CUDA_VISIBLE_DEVICES=3 python train_imagenet_foveater.py --config configs/imagenet_foveater.yaml \
-  --set data_dir=/path/to/imagenet num_classes=1000 epochs=500 &
-PID_IMG=$!
-wait "$PID_PC"
-wait "$PID_IMG"
 ```
 
 ---
