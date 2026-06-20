@@ -1,13 +1,43 @@
+# Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Data and generated artifacts
+data/*
+!data/*.py
+outputs/
 checkpoints/
 logs/
-data/
-cache/
-*.tar.gz
+results/
+wandb/
+runs/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.h5
+*.hdf5
+*.npy
+*.npz
+*.off
 *.zip
-.DS_Store
-*.egg-info/
-dist/
-build/
+*.tar
+*.tar.gz
+*.pdf
+
+# Cluster
+slurm-*.out
+slurm-*.err
+core.*
