@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${MODELNET10_DIR:?Set MODELNET10_DIR}"
-: "${MODELNET40_DIR:?Set MODELNET40_DIR}"
+ROOT="${SPIKEGAT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+cd "$ROOT"
 
-sbatch --export=ALL scripts/slurm/spikegat_mn10.sbatch
-sbatch --export=ALL scripts/slurm/spikegat_mn40.sbatch
+mapfile -t JOBS < <(find scripts/slurm -mindepth 2 -type f -name '*.sbatch' | sort)
+if ((${#JOBS[@]} == 0)); then
+  echo "No dataset jobs found under scripts/slurm/<dataset>/" >&2
+  exit 1
+fi
+
+for job in "${JOBS[@]}"; do
+  echo "Submitting $job"
+  sbatch --export=ALL "$job"
+done

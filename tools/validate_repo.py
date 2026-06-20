@@ -1,78 +1,91 @@
 #!/usr/bin/env python3
-"""Validate the focused ModelNet10/40 SpikeGAT repository."""
+"""Validate repository health while allowing new dataset integrations."""
 
 from __future__ import annotations
 
 import py_compile
+import subprocess
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_EXPERIMENTS = {
-    "experiments/full/train_spikegat_modelnet10.py",
-    "experiments/full/train_spikegat_modelnet40.py",
+BASELINE_EXPERIMENTS = {
+    "experiments/modelnet/train_spikegat_modelnet10.py",
+    "experiments/modelnet/train_spikegat_modelnet40.py",
 }
-REQUIRED = EXPECTED_EXPERIMENTS | {
+REQUIRED = BASELINE_EXPERIMENTS | {
+    "CONTRIBUTING.md",
     "README.md",
     "docs/CLUSTER.md",
     "docs/EXPERIMENTS.md",
-    "scripts/slurm/spikegat_mn10.sbatch",
-    "scripts/slurm/spikegat_mn40.sbatch",
+    "scripts/slurm/modelnet/spikegat_mn10.sbatch",
+    "scripts/slurm/modelnet/spikegat_mn40.sbatch",
     "scripts/slurm/submit_all.sh",
     "requirements.txt",
     "environment.yml",
 }
-FORBIDDEN_SUFFIXES = {".pt", ".pth", ".ckpt", ".pdf", ".h5", ".hdf5"}
-FORBIDDEN_PATH_PARTS = {"configs", "data", "datasets", "models", "tasks", "training"}
-STALE_TEXT = (
-    "ASPClassifier",
-    "ASPSegmentor",
-    "train_asp_",
-    "ScanObjectNN",
-    "ShapeNetPart",
-    "S3DIS",
-)
+FORBIDDEN_ARTIFACT_SUFFIXES = {
+    ".ckpt",
+    ".h5",
+    ".hdf5",
+    ".onnx",
+    ".pdf",
+    ".pt",
+    ".pth",
+}
+STALE_ASP_TEXT = ("ASPClassifier", "ASPSegmentor", "train_asp_")
+IGNORED_PARTS = {".git", ".venv", "__pycache__", "venv"}
+
+
+def tracked_files() -> list[Path]:
+    """Return files Git would publish, with a filesystem fallback."""
+    result = subprocess.run(
+        ["git", "ls-files", "-z"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+    )
+    if result.returncode == 0:
+        return [ROOT / name.decode() for name in result.stdout.split(b"\0") if name]
+    return [
+        path
+        for path in ROOT.rglob("*")
+        if path.is_file() and not IGNORED_PARTS.intersection(path.relative_to(ROOT).parts)
+    ]
 
 
 def main() -> int:
     errors: list[str] = []
 
-    for rel in REQUIRED:
+    for rel in sorted(REQUIRED):
         if not (ROOT / rel).is_file():
             errors.append(f"missing required file: {rel}")
 
-    experiment_files = {
-        path.relative_to(ROOT).as_posix()
-        for path in (ROOT / "experiments").rglob("*.py")
-    }
-    if experiment_files != EXPECTED_EXPERIMENTS:
-        errors.append(
-            "unexpected experiment surface: "
-            f"expected={sorted(EXPECTED_EXPERIMENTS)}, actual={sorted(experiment_files)}"
-        )
-
-    python_files = sorted(path for path in ROOT.rglob("*.py") if ".venv" not in path.parts)
+    python_files = sorted(
+        path
+        for path in ROOT.rglob("*.py")
+        if not IGNORED_PARTS.intersection(path.relative_to(ROOT).parts)
+    )
     for path in python_files:
         try:
             py_compile.compile(str(path), doraise=True)
         except py_compile.PyCompileError as exc:
             errors.append(str(exc))
 
-    for path in ROOT.rglob("*"):
-        if not path.is_file():
-            continue
+    published_files = [path for path in tracked_files() if path.is_file()]
+    for path in published_files:
         rel = path.relative_to(ROOT)
-        if any(part in FORBIDDEN_PATH_PARTS for part in rel.parts):
-            errors.append(f"out-of-scope path remains: {rel}")
-        if path.suffix.lower() in FORBIDDEN_SUFFIXES:
-            errors.append(f"generated/restricted artifact remains: {rel}")
+        if path.suffix.lower() in FORBIDDEN_ARTIFACT_SUFFIXES:
+            errors.append(f"generated/restricted artifact is tracked: {rel}")
 
-    text_files = [ROOT / "README.md", *ROOT.glob("docs/*.md"), *ROOT.glob("scripts/slurm/*")]
-    for path in text_files:
+        if path == ROOT / "tools/validate_repo.py":
+            continue
+        if path.suffix.lower() not in {".md", ".py", ".sh", ".sbatch", ".txt", ".yaml", ".yml"}:
+            continue
         text = path.read_text(encoding="utf-8", errors="replace")
-        for stale in STALE_TEXT:
+        for stale in STALE_ASP_TEXT:
             if stale in text:
-                errors.append(f"stale out-of-scope reference in {path.relative_to(ROOT)}: {stale}")
+                errors.append(f"stale ASP reference in {rel}: {stale}")
 
     if errors:
         print("VALIDATION FAILED")
@@ -80,7 +93,12 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print(f"VALIDATION PASSED: {len(python_files)} Python files; MN10/MN40 only")
+    experiment_count = len(list((ROOT / "experiments").rglob("*.py")))
+    print(
+        "VALIDATION PASSED: "
+        f"{len(python_files)} Python files, {experiment_count} experiment files; "
+        "additional datasets are supported"
+    )
     return 0
 
 
