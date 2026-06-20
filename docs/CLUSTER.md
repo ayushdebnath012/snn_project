@@ -17,6 +17,21 @@ python tools/validate_repo.py
 
 Do not train on the login node.
 
+## Download baseline data once
+
+Use persistent shared storage rather than node-local disk:
+
+```bash
+python tools/download_modelnet.py --dataset 10 --data-root /shared/datasets
+python tools/download_modelnet.py --dataset 40 --data-root /shared/datasets
+python tools/download_modelnet.py --dataset all --data-root /shared/datasets --check
+```
+
+The downloader resumes partial archives, validates the extracted class/split
+layout, and removes each ZIP after successful extraction unless
+`--keep-archive` is supplied. Do not run simultaneous downloads into the same
+destination.
+
 ## Configure ModelNet baseline paths
 
 ```bash

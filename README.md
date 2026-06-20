@@ -56,6 +56,19 @@ Choose the PyTorch wheel that matches the CUDA driver on your machine.
 
 ## ModelNet baseline data
 
+Raw datasets are not committed because the official archives are large
+(approximately 451 MiB for ModelNet10 and 1.90 GiB for ModelNet40). Download
+and extract either dataset from its official Princeton source with:
+
+```bash
+python tools/download_modelnet.py --dataset 10
+python tools/download_modelnet.py --dataset 40
+```
+
+By default this creates `data/ModelNet10` and `data/ModelNet40`; `data/` is
+ignored by Git. Use `--data-root /shared/datasets` on a cluster, `--check` to
+validate an existing copy, or `--list` to inspect sources without downloading.
+
 Each ModelNet root must contain class directories, each with `train/` and
 `test/` folders containing `.off`, `.txt`, or `.npy` point-cloud files:
 
@@ -71,11 +84,11 @@ Training jobs never download datasets or install packages at runtime.
 ## Full ModelNet runs
 
 ```bash
-MODELNET10_DIR=/datasets/ModelNet10 \
+MODELNET10_DIR=$PWD/data/ModelNet10 \
 SPIKEGAT_CKPT_DIR=/checkpoints/spikegat_mn10 \
 python -u experiments/modelnet/train_spikegat_modelnet10.py
 
-MODELNET40_DIR=/datasets/ModelNet40 \
+MODELNET40_DIR=$PWD/data/ModelNet40 \
 SPIKEGAT_CKPT_DIR=/checkpoints/spikegat_mn40 \
 python -u experiments/modelnet/train_spikegat_modelnet40.py
 ```

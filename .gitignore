@@ -16,7 +16,7 @@ Thumbs.db
 
 # Data and generated artifacts
 data/*
-!data/*.py
+!data/README.md
 outputs/
 checkpoints/
 logs/

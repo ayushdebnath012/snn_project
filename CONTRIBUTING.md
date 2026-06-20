@@ -20,7 +20,8 @@ Do not commit raw datasets, checkpoints, generated metrics, logs, or papers.
 ## Dataset contribution checklist
 
 1. Document how users obtain the dataset and its expected local directory
-   layout. Do not download data silently during a training job.
+   layout. Prefer a separate, resumable downloader under `tools/`; do not
+   download data silently during a training job or commit the raw dataset.
 2. Add a complete training entrypoint under `experiments/<dataset>/`.
 3. Make dataset paths, checkpoint paths, seeds, and important hyperparameters
    configurable through arguments or environment variables.

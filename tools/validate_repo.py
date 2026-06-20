@@ -16,11 +16,13 @@ BASELINE_EXPERIMENTS = {
 REQUIRED = BASELINE_EXPERIMENTS | {
     "CONTRIBUTING.md",
     "README.md",
+    "data/README.md",
     "docs/CLUSTER.md",
     "docs/EXPERIMENTS.md",
     "scripts/slurm/modelnet/spikegat_mn10.sbatch",
     "scripts/slurm/modelnet/spikegat_mn40.sbatch",
     "scripts/slurm/submit_all.sh",
+    "tools/download_modelnet.py",
     "requirements.txt",
     "environment.yml",
 }
