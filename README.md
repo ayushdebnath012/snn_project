@@ -1,16 +1,16 @@
-# SpikeGAT-SNN for ModelNet
+# SpikeGAT-SNN
 
-Focused full-training repository for Max-First SpikeGAT classification on
-ModelNet10 and ModelNet40. ASP is not used in this codebase.
+Extensible research repository for SpikeGAT-based spiking point-cloud learning.
+The currently maintained baselines target ModelNet10 and ModelNet40; additional
+datasets and tasks can be added as independent modules without changing those
+baselines. ASP is not used in this codebase.
 
-## Scope
-
-Only two experiments are supported:
+## Available experiments
 
 | Dataset | Full training entrypoint | Paper target |
 |---|---|---:|
-| ModelNet10 | `experiments/full/train_spikegat_modelnet10.py` | 94.93% single-pass OA |
-| ModelNet40 | `experiments/full/train_spikegat_modelnet40.py` | 92.38% single-pass OA |
+| ModelNet10 | `experiments/modelnet/train_spikegat_modelnet10.py` | 94.93% single-pass OA |
+| ModelNet40 | `experiments/modelnet/train_spikegat_modelnet40.py` | 92.38% single-pass OA |
 
 The target values are comparison thresholds, not claimed results. Completed
 runs write measured `single_pass_oa` and supplementary `scale_tta_oa` to
@@ -19,28 +19,30 @@ runs write measured `single_pass_oa` and supplementary `scale_tta_oa` to
 ## Repository layout
 
 ```text
-experiments/full/
-  train_spikegat_modelnet10.py
-  train_spikegat_modelnet40.py
+experiments/
+  modelnet/                 # current MN10/MN40 full runners
+  <dataset>/                # future dataset-specific runners
 scripts/slurm/
-  spikegat_mn10.sbatch
-  spikegat_mn40.sbatch
-  submit_all.sh
+  modelnet/                 # current cluster jobs
+  <dataset>/                # future dataset-specific jobs
 docs/
   CLUSTER.md
   EXPERIMENTS.md
+CONTRIBUTING.md             # extension contract for new datasets
 tools/
   validate_repo.py
 ```
 
-Datasets, checkpoints, papers, reports, and generated results are deliberately
-excluded.
+Reusable code may be introduced in top-level `datasets/`, `models/`,
+`training/`, `tasks/`, or `configs/` packages as the project grows. Datasets,
+checkpoints, papers, reports, and generated results themselves remain excluded
+from Git.
 
 ## Environment
 
 ```bash
-git clone https://github.com/ayushdebnath012/ASP-SNN.git
-cd ASP-SNN
+git clone https://github.com/ayushdebnath012/SNN.git
+cd SNN
 
 python3 -m venv .venv
 source .venv/bin/activate
@@ -52,9 +54,9 @@ python tools/validate_repo.py
 
 Choose the PyTorch wheel that matches the CUDA driver on your machine.
 
-## Dataset layout
+## ModelNet baseline data
 
-Each dataset root must contain class directories, each with `train/` and
+Each ModelNet root must contain class directories, each with `train/` and
 `test/` folders containing `.off`, `.txt`, or `.npy` point-cloud files:
 
 ```text
@@ -66,16 +68,16 @@ ModelNet40/
 
 Training jobs never download datasets or install packages at runtime.
 
-## Full runs
+## Full ModelNet runs
 
 ```bash
 MODELNET10_DIR=/datasets/ModelNet10 \
 SPIKEGAT_CKPT_DIR=/checkpoints/spikegat_mn10 \
-python -u experiments/full/train_spikegat_modelnet10.py
+python -u experiments/modelnet/train_spikegat_modelnet10.py
 
 MODELNET40_DIR=/datasets/ModelNet40 \
 SPIKEGAT_CKPT_DIR=/checkpoints/spikegat_mn40 \
-python -u experiments/full/train_spikegat_modelnet40.py
+python -u experiments/modelnet/train_spikegat_modelnet40.py
 ```
 
 Optional environment overrides:
@@ -91,20 +93,30 @@ Rerunning the same command resumes from the latest checkpoint.
 
 ## Cluster execution
 
-See [docs/CLUSTER.md](docs/CLUSTER.md). The supplied jobs request one GPU each:
+See [docs/CLUSTER.md](docs/CLUSTER.md). The supplied ModelNet jobs request one
+GPU each:
 
 ```bash
 export MODELNET10_DIR=/shared/datasets/ModelNet10
 export MODELNET40_DIR=/shared/datasets/ModelNet40
 export SPIKEGAT_OUTPUT_ROOT=$SCRATCH/spikegat
 
-sbatch scripts/slurm/spikegat_mn10.sbatch
-sbatch scripts/slurm/spikegat_mn40.sbatch
+sbatch scripts/slurm/modelnet/spikegat_mn10.sbatch
+sbatch scripts/slurm/modelnet/spikegat_mn40.sbatch
 ```
+
+## Adding a dataset
+
+Follow [CONTRIBUTING.md](CONTRIBUTING.md). New datasets should have a dedicated
+experiment folder, documented data contract and metrics, a reproducible full
+runner, and a matching cluster job where applicable. The repository validator
+accepts additional datasets and Python packages while preserving the working
+ModelNet baselines.
 
 ## Metric integrity
 
-- Single-pass overall accuracy is the primary comparison metric.
-- Scale-TTA accuracy is reported separately.
+- Use the benchmark's standard primary metric and state it explicitly.
+- For ModelNet, single-pass overall accuracy is the primary comparison metric.
+- Label test-time augmentation results separately from single-pass results.
 - A smoke test validates execution and gradients; it does not establish
   benchmark accuracy.

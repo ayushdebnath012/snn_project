@@ -1,10 +1,10 @@
-# ModelNet10/40 cluster guide
+# Cluster guide
 
 ## Prepare once on the login node
 
 ```bash
-git clone https://github.com/ayushdebnath012/ASP-SNN.git
-cd ASP-SNN
+git clone https://github.com/ayushdebnath012/SNN.git
+cd SNN
 
 module load cuda/12.1  # replace with your site's CUDA module
 python3 -m venv .venv
@@ -17,7 +17,7 @@ python tools/validate_repo.py
 
 Do not train on the login node.
 
-## Configure shared paths
+## Configure ModelNet baseline paths
 
 ```bash
 export MODELNET10_DIR=/shared/datasets/ModelNet10
@@ -29,14 +29,14 @@ export SPIKEGAT_VENV=$PWD/.venv
 Dataset roots must contain class-level `train/` and `test/` directories. Keep
 checkpoints on persistent scratch/shared storage rather than node-local `/tmp`.
 
-## Submit
+## Submit current ModelNet jobs
 
 Edit the partition, wall time, memory, and module assumptions in the two SLURM
 files to match your site, then run:
 
 ```bash
-sbatch --export=ALL scripts/slurm/spikegat_mn10.sbatch
-sbatch --export=ALL scripts/slurm/spikegat_mn40.sbatch
+sbatch --export=ALL scripts/slurm/modelnet/spikegat_mn10.sbatch
+sbatch --export=ALL scripts/slurm/modelnet/spikegat_mn40.sbatch
 ```
 
 Or submit both:
@@ -45,6 +45,11 @@ Or submit both:
 bash scripts/slurm/submit_all.sh
 ```
 
+Dataset contributors should place additional templates under
+`scripts/slurm/<dataset>/`. The submission helper discovers all checked-in
+`.sbatch` files recursively; use it only after configuring every required
+dataset environment variable. See [CONTRIBUTING.md](../CONTRIBUTING.md).
+
 ## Interactive GPU run
 
 ```bash
@@ -52,7 +57,7 @@ source .venv/bin/activate
 export MODELNET40_DIR=/shared/datasets/ModelNet40
 export SPIKEGAT_CKPT_DIR=$SCRATCH/spikegat/mn40
 export BATCH_SIZE=32 NUM_WORKERS=4
-python -u experiments/full/train_spikegat_modelnet40.py
+python -u experiments/modelnet/train_spikegat_modelnet40.py
 ```
 
 ## Resume and monitoring
