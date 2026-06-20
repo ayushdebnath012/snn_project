@@ -16,4 +16,4 @@ if ! python -c 'import torch' >/dev/null 2>&1; then
 fi
 
 python -m pip install -r requirements.txt
-python tools/validate_repo.py --imports
+python tools/validate_repo.py

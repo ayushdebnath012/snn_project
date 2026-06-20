@@ -1,4 +1,4 @@
-name: asp-snn
+name: spikegat-snn
 channels:
   - pytorch
   - nvidia
@@ -8,6 +8,7 @@ dependencies:
   - pytorch>=2.1
   - torchvision
   - pytorch-cuda=12.1
+  - numpy>=1.24
   - pip
   - pip:
-      - -r requirements.txt
+      - trimesh>=4.0

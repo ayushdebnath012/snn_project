@@ -9,12 +9,12 @@
 #SBATCH --error=slurm-%x-%j.err
 
 set -euo pipefail
-ROOT="${ASP_SNN_ROOT:-${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}}"
+ROOT="${SPIKEGAT_ROOT:-${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}}"
 cd "$ROOT"
-source "${ASP_SNN_VENV:-$ROOT/.venv}/bin/activate"
+source "${SPIKEGAT_VENV:-$ROOT/.venv}/bin/activate"
 
 : "${MODELNET40_DIR:?Set MODELNET40_DIR to the ModelNet40 root before sbatch}"
-OUTPUT_ROOT="${ASP_SNN_OUTPUT_ROOT:-$ROOT/outputs}"
+OUTPUT_ROOT="${SPIKEGAT_OUTPUT_ROOT:-$ROOT/outputs}"
 export SPIKEGAT_CKPT_DIR="${SPIKEGAT_CKPT_DIR:-$OUTPUT_ROOT/spikegat_mn40}"
 export BATCH_SIZE="${BATCH_SIZE:-32}"
 export NUM_WORKERS="${NUM_WORKERS:-4}"
